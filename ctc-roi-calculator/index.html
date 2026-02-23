@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<!-- saved from url=(0030)https://lbdinh.github.io/CAMP/ -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src &#39;self&#39; &#39;unsafe-inline&#39; &#39;unsafe-eval&#39; data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src &#39;self&#39; https://www.youtube.com https://trytako.com; child-src &#39;self&#39;; manifest-src &#39;self&#39;; worker-src &#39;self&#39;; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta http-equiv="Content-Security-Policy" content="default-src &#39;self&#39; &#39;unsafe-inline&#39; &#39;unsafe-eval&#39; data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src &#39;self&#39; https://www.youtube.com https://trytako.com; child-src &#39;self&#39;; manifest-src &#39;self&#39;; worker-src &#39;self&#39;; upgrade-insecure-requests; block-all-mixed-content;">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive ROI Calculator: CalAmp DataHub</title>
+    <style>
+        :root {
+            --color-primary: #003366;
+            --color-secondary: #00AEEF;
+            --color-accent: #8CC63F;
+            --color-danger: #D9534F;
+            --color-result: #7030A0;
+            --color-text: #333;
+            --color-bg: #f8f9fa;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--color-text);
+            background: var(--color-bg);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        h1, h2, h3, h4 { color: var(--color-primary); margin-top: 0; }
+        h1 { text-align: center; font-size: 2.2em; margin-bottom: 15px; }
+        h2 { border-bottom: 2px solid var(--color-secondary); padding-bottom: 10px; margin-bottom: 20px; }
+        .main-subtitle {
+            text-align: center;
+            max-width: 800px;
+            margin: -10px auto 25px auto;
+            font-size: 0.95em;
+            line-height: 1.5;
+            color: #555;
+        }
+        .section-subtitle {
+            text-align: left;
+            margin: -15px 0 15px 0;
+            font-size: 0.95em;
+            line-height: 1.5;
+            color: #555;
+            font-style: italic;
+        }
+        
+        .input-with-dollar { position: relative; display: inline-block; }
+        .input-with-dollar::before { content: '$'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #888; }
+        .editable.has-dollar { padding-left: 24px; }
+        .editable { background: #f0f8ff; color: #0056b3; border: 1px solid #b3d7ff; border-radius: 5px; padding: 6px 8px; font-weight: bold; text-align: center; transition: all 0.2s; }
+        .editable:hover { border-color: var(--color-secondary); }
+        .editable:focus { outline: none; box-shadow: 0 0 0 3px rgba(0, 174, 239, 0.4); background: #fff; }
+        td .editable.salary { width: 120px; }
+        .stepper-container { display: flex; align-items: center; gap: 0; }
+        .stepper-container .editable { border-radius: 0; width: 80px; }
+        .stepper-container .editable.integer-input { width: 60px; }
+        .stepper-btn { background: #e9ecef; border: 1px solid #ced4da; color: #495057; cursor: pointer; font-weight: bold; width: 25px; height: 38px; text-align: center; user-select: none; transition: background 0.15s; flex-shrink: 0; }
+        .stepper-btn:hover { background: #dee2e6; }
+        .stepper-btn.stepper-minus { border-radius: 5px 0 0 5px; border-right: none; }
+        .stepper-btn.stepper-plus { border-radius: 0 5px 5px 0; border-left: none; }
+        .info-icon { display: inline-block; width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 50%; background: var(--color-secondary); color: #fff; font-weight: bold; font-size: 12px; cursor: pointer; flex-shrink: 0; }
+
+        .summary-container {
+            display: flex; gap: 20px; padding: 20px; background: #fdfdfd; border: 1px solid #e7e7e7; border-radius: var(--border-radius); margin-bottom: 40px; align-items: center; flex-wrap: wrap;
+        }
+        .summary-components { flex: 3; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 20px; text-align: center; }
+        .summary-arrow { flex: 0 0 50px; text-align: center; font-size: 3em; color: #ccc; }
+        .summary-results { flex: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: center; }
+        .summary-item { padding: 15px; border-radius: var(--border-radius); background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .summary-item h3 { font-size: 1em; margin-bottom: 8px; white-space: nowrap; }
+        .summary-item .value { font-weight: bold; }
+        .summary-item .subtitle { font-size: 0.8em; font-style: italic; color: #666; margin-top: 5px; }
+        .summary-components .value { font-size: 1.8em; }
+        .summary-results .value { font-size: 2.5em; }
+        #summary_diy_cost { color: var(--color-danger); }
+        #summary_gross_savings { color: var(--color-accent); }
+        #summary_ctc_cost { color: var(--color-secondary); }
+        #summary_net_savings, #summary_roi { color: var(--color-result); }
+        #summary_net_savings.negative, #summary_roi.negative { color: var(--color-danger); }
+        
+        /* MODIFIED: Redesigned Base Assumptions Section */
+        .assumptions-section { padding: 20px 30px; background: #f0f0f0; border-radius: var(--border-radius); margin-bottom: 40px; }
+        .assumptions-grid { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-top: 10px; }
+        .assumption-column { display: flex; flex-direction: column; align-items: center; gap: 8px; flex-basis: 250px; flex-grow: 1; }
+        .assumption-column label { font-weight: bold; color: var(--color-primary); font-size: 1.1em; margin-bottom: 4px; }
+        .assumption-column .editable { background-color: #fff; width: 100%; box-sizing: border-box; }
+        .assumption-column .stepper-container .editable { width: 80px; }
+        .preset-container { display: flex; flex-direction: row; justify-content: center; gap: 8px; flex-wrap: nowrap; width: 100%; }
+        .preset-button { background: #fff; color: var(--color-secondary); border: 2px solid var(--color-secondary); padding: 8px 10px; border-radius: var(--border-radius); font-weight: bold; cursor: pointer; transition: all 0.2s ease-in-out; font-size: 0.9em; text-align: center; flex: 1 1 0; }
+        .preset-button:hover { background: #e2f1ff; }
+        .preset-button.active { background: var(--color-secondary); color: #fff; box-shadow: 0 2px 8px rgba(0, 174, 239, 0.4); }
+
+        .accordion-set { margin-top: 20px; }
+        .accordion { border: 1px solid #ddd; border-radius: var(--border-radius); margin-bottom: 10px; overflow: hidden; }
+        .accordion-header { background: #e2f1ff; color: var(--color-primary); padding: 15px 20px; cursor: pointer; font-weight: bold; font-size: 1.2em; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
+        .accordion-header:hover { background-color: #d0e8ff; }
+        .accordion-header::after { content: '+'; font-size: 1.5em; font-weight: bold; transition: transform 0.3s ease-out; }
+        .accordion.active .accordion-header::after { transform: rotate(45deg); }
+        .accordion-panel { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; background: #fff; }
+        
+        .comparison-table { width: 100%; border-collapse: collapse; }
+        .comparison-table th, .comparison-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; vertical-align: middle; border-right: 1px solid #eaf2f8; }
+        .comparison-table th:last-child, .comparison-table td:last-child { border-right: none; }
+        .comparison-table th { background: var(--color-primary); color: #fff; }
+        .role-cell { display: flex; align-items: center; gap: 8px; }
+        .condensed-cell { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .condensed-cell.savings-only { justify-content: flex-end; }
+        .input-group { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+        .input-group .role-label { display: inline-block; width: 110px; text-align: left; color: #555; }
+        .equals-sign { font-weight: bold; font-size: 1.2em; color: #555; padding: 0 10px; }
+        .cost-pill, .savings-pill { display: inline-block; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 1.1em; border: 1px solid; white-space: nowrap; }
+        .cost-pill { background: #fdecea; color: #a94442; border-color: #e8c1c0; }
+        .savings-pill { background: #eaf5e2; color: #3c763d; border-color: #d6e9c6; }
+        
+        .legal-disclaimer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.8em; color: #666; text-align: left; }
+        #role_tooltip { display: none; position: absolute; background: var(--color-primary); color: #fff; padding: 10px 15px; border-radius: var(--border-radius); box-shadow: var(--box-shadow); z-index: 100; max-width: 300px; font-size: 0.9em; pointer-events: none; }
+
+        @media (max-width: 992px) {
+            .summary-arrow { display: none; }
+            .summary-container { flex-direction: column; }
+            .summary-components, .summary-results { width: 100%; }
+            .summary-results { border-top: 2px solid #ddd; padding-top: 20px; margin-top: 20px; }
+            /* MODIFIED: Stack assumptions on medium screens */
+            .assumptions-grid { flex-direction: column; align-items: center; gap: 25px; }
+            .assumption-column { width: 100%; max-width: 350px; }
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .comparison-table thead { display: none; }
+            .comparison-table, .comparison-table tbody, .comparison-table tr, .comparison-table td { display: block; width: 100%; }
+            .comparison-table tr { margin-bottom: 20px; border: 1px solid #ddd; border-radius: var(--border-radius); overflow: hidden; }
+            .comparison-table td { padding: 12px 15px; border-bottom: 1px solid #eee; text-align: right; position: relative; border-right: none; }
+            .comparison-table tr td:last-child { border-bottom: none; }
+            .comparison-table td:before { content: attr(data-label); font-weight: bold; position: absolute; left: 15px; top: 50%; transform: translateY(-50%); text-align: left; color: var(--color-primary); }
+            .comparison-table td[data-label="Role / Expense"] { background: #f0f8ff; font-weight: bold; }
+            .comparison-table td[data-label="Role / Expense"]:before { display: none; }
+            .role-cell { justify-content: flex-end; width: 100%; }
+            .condensed-cell { flex-direction: column; align-items: flex-end; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ccc; }
+            td:before { top: 21px; }
+            td:has(.condensed-cell):before { top: 15px; }
+            .equals-sign { display: none; }
+            .input-group { justify-content: flex-end; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>CTC DataHub Interactive ROI Calculator</h1>
+        <p class="main-subtitle">
+            Discover savings when switching to CalAmp DataHub. Use the configuration tools below to tailor the calculation to your business.
+        </p>
+
+        <!-- MODIFIED: Redesigned and more compact Base Assumptions section -->
+        <section class="assumptions-section">
+            <h2>Base Assumptions</h2>
+            <div class="assumptions-grid">
+                <div class="assumption-column">
+                    <label for="num_units">Number of Devices</label>
+                    <div class="editable-container">
+                        <input type="text" id="num_units" class="editable" data-hidden-id="num_units_hidden" value="200,000" autocomplete="off">
+                        <input type="hidden" id="num_units_hidden" value="200000">
+                    </div>
+                </div>
+                <div class="assumption-column">
+                    <label>Scenario Profile</label>
+                    <div class="preset-container">
+                        <button id="preset_startup" class="preset-button" type="button">Startup</button>
+                        <button id="preset_midsize" class="preset-button" type="button">Mid-size</button>
+                        <button id="preset_enterprise" class="preset-button active" type="button">Enterprise</button>
+                    </div>
+                </div>
+                <div class="assumption-column">
+                    <label for="ctc_cost_per_unit">DataHub Cost / Device</label>
+                    <div class="stepper-container">
+                        <button class="stepper-btn stepper-minus" data-for="ctc_cost_per_unit" data-step="0.01">-</button>
+                        <div class="input-with-dollar"><input type="text" inputmode="decimal" id="ctc_cost_per_unit" class="editable has-dollar" value="0.75" autocomplete="off"></div>
+                        <button class="stepper-btn stepper-plus" data-for="ctc_cost_per_unit" data-step="0.01">+</button>
+                    </div>
+                    <div class="annual-cost-display" id="display_annual_ctc_cost" style="visibility: hidden; height: 0;">$1,800,000</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Executive Summary</h2>
+            <div class="summary-container">
+                <div class="summary-components">
+                    <div class="summary-item"><h3>Platform Maintenance</h3><div class="value" id="summary_diy_cost" data-value="8423150">$8,423,150</div><div class="subtitle">Your Annual Cost</div></div>
+                    <div class="summary-item"><h3>CalAmp DataHub</h3><div class="value" id="summary_ctc_cost" data-value="1800000">$1,800,000</div><div class="subtitle">Your Investment</div></div>
+                    <div class="summary-item"><h3>Gross Savings</h3><div class="value" id="summary_gross_savings" data-value="4481100">$4,481,100</div><div class="subtitle">From Reallocation</div></div>
+                </div>
+                <div class="summary-arrow">→</div>
+                <div class="summary-results">
+                    <div class="summary-item"><h3>Net Annual Savings</h3><div class="value" id="summary_net_savings" data-value="2681100">$2,681,100</div><div class="subtitle">(Gross Savings - Investment)</div></div>
+                    <div class="summary-item"><h3>Return on Investment</h3><div class="value" id="summary_roi" data-value="148.95000000000002">149.0%</div><div class="subtitle">(Net Savings / Investment)</div></div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <!-- MODIFIED: Renamed section header -->
+            <h2>Detailed Cost Savings Breakdown</h2>
+            <p class="section-subtitle">
+                Expand any category to see how costs are calculated. Staffing costs are pre-filled with US median estimates; adjust to match your reality. We've also added a 35% fringe benefit rate to the salaries to more accurately reflect real-world costs.
+            </p>
+            <div id="accordion_container" class="accordion-set">
+            <div class="accordion" id="operational_accordion">
+                <div class="accordion-header">Operational Expenses</div>
+                <div class="accordion-panel">
+                    <table class="comparison-table">
+                        <thead><tr><th>Role / Expense</th><th>Platform Maintenance</th><th>Gross Annual Savings</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Role / Expense">Your Cloud Cost <span class="info-icon" data-description="Enter your estimated monthly cost for cloud services (e.g., AWS, Azure, GCP) per device. This includes server hosting, data processing, storage, and egress fees.">?</span></td>
+                                <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="input_cloud_compute" data-step="0.01">-</button><div class="input-with-dollar"><input type="text" inputmode="decimal" id="input_cloud_compute" class="editable op-cost has-dollar" value="0.76"></div><button class="stepper-btn stepper-plus" data-for="input_cloud_compute" data-step="0.01">+</button></div><span class="role-label">per device/mo</span></div><span class="equals-sign">=</span><div class="cost-pill" id="display_annual_cloud_cost">$1,800,000</div></div></td>
+                                <td data-label="Gross Annual Savings"><div class="condensed-cell savings-only"><div class="savings-pill" id="savings_annual_cloud_cost">$1,800,000</div></div></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Role / Expense">Your Airtime Cost <span class="info-icon" data-description="Enter your monthly cellular data (airtime) cost per device. If you purchase devices with a bundled data plan from CalAmp, this cost may be $0.">?</span></td>
+                                <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="input_airtime" data-step="0.01">-</button><div class="input-with-dollar"><input type="text" inputmode="decimal" id="input_airtime" class="editable op-cost has-dollar" value="0.00"></div><button class="stepper-btn stepper-plus" data-for="input_airtime" data-step="0.01">+</button></div><span class="role-label">per device/mo</span></div><span class="equals-sign">=</span><div class="cost-pill" id="display_annual_airtime_cost">$0</div></div></td>
+                                <td data-label="Gross Annual Savings"><div class="condensed-cell savings-only"><div class="savings-pill" id="savings_annual_airtime_cost">$0</div></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+                    <div class="accordion">
+                        <div class="accordion-header">Cloud Platform &amp; Data Pipeline Development</div>
+                        <div class="accordion-panel">
+                            <table class="comparison-table">
+                                <thead><tr><th>Role / Expense</th><th>Platform Maintenance</th><th>Gross Annual Savings</th></tr></thead>
+                                <tbody>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>System/Cloud Architect</span><span class="info-icon" data-description="Designs the overall cloud infrastructure, ensuring scalability, reliability, and performance for the entire telematics platform." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_cloud_arch" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_cloud_arch" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_cloud_arch" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_cloud_arch" class="editable salary has-dollar" data-hidden-id="salary_cloud_arch_hidden"><input type="hidden" id="salary_cloud_arch_hidden" value="198000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_cloud_arch">$534,600</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_cloud_arch" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_cloud_arch" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_cloud_arch" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_cloud_arch">$267,300</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>DevOps Engineer</span><span class="info-icon" data-description="Manages the deployment, automation, and monitoring of the cloud platform, ensuring continuous integration and delivery (CI/CD)." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_devops" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_devops" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_devops" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_devops" class="editable salary has-dollar" data-hidden-id="salary_devops_hidden"><input type="hidden" id="salary_devops_hidden" value="177000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_devops">$955,800</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_devops" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_devops" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_devops" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_devops">$477,900</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Database Engineer</span><span class="info-icon" data-description="Manages and optimizes the databases that store massive volumes of telematics data, ensuring fast and reliable data access." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_db_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_db_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_db_eng" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_db_eng" class="editable salary has-dollar" data-hidden-id="salary_db_eng_hidden"><input type="hidden" id="salary_db_eng_hidden" value="180000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_db_eng">$729,000</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_db_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_db_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_db_eng" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_db_eng">$486,000</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Backend Developers</span><span class="info-icon" data-description="Builds and maintains the server-side logic, APIs, and data processing pipelines that power the telematics platform." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_be_dev" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_be_dev" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_be_dev" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_be_dev" class="editable salary has-dollar" data-hidden-id="salary_be_dev_hidden"><input type="hidden" id="salary_be_dev_hidden" value="161000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_be_dev">$1,086,750</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_be_dev" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_be_dev" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_be_dev" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_be_dev">$652,050</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>QA &amp; Testing</span><span class="info-icon" data-description="Performs quality assurance and testing across the entire platform, from device firmware to cloud applications, to ensure stability." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_qa" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_qa" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_qa" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_qa" class="editable salary has-dollar" data-hidden-id="salary_qa_hidden"><input type="hidden" id="salary_qa_hidden" value="140000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_qa">$756,000</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_qa" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_qa" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_qa" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_qa">$378,000</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Product Manager</span><span class="info-icon" data-description="Defines the product strategy, roadmap, and feature requirements for the in-house telematics platform." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_pm" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_pm" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_pm" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_pm" class="editable salary has-dollar" data-hidden-id="salary_pm_hidden"><input type="hidden" id="salary_pm_hidden" value="196000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_pm">$264,600</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_pm" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_pm" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_pm" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_pm">$0</div></div></td>
+                        </tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="accordion">
+                        <div class="accordion-header">Network Infrastructure, Security &amp; Compliance</div>
+                        <div class="accordion-panel">
+                            <table class="comparison-table">
+                                <thead><tr><th>Role / Expense</th><th>Platform Maintenance</th><th>Gross Annual Savings</th></tr></thead>
+                                <tbody>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Network Engineer</span><span class="info-icon" data-description="Manages the networking infrastructure, including cellular connectivity, VPNs, and traffic routing for device data." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_net_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_net_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_net_eng" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_net_eng" class="editable salary has-dollar" data-hidden-id="salary_net_eng_hidden"><input type="hidden" id="salary_net_eng_hidden" value="141000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_net_eng">$380,700</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_net_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_net_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_net_eng" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_net_eng">$190,350</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Security Engineer</span><span class="info-icon" data-description="Implements and monitors security protocols to protect device data, cloud infrastructure, and applications from threats." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_sec_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_sec_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_sec_eng" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_sec_eng" class="editable salary has-dollar" data-hidden-id="salary_sec_eng_hidden"><input type="hidden" id="salary_sec_eng_hidden" value="170000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_sec_eng">$459,000</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_sec_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_sec_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_sec_eng" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_sec_eng">$229,500</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Certification &amp; Audits</span><span class="info-icon" data-description="Manages costs and efforts for carrier certifications (e.g., AT&amp;T, Verizon) and industry compliance audits (e.g., SOC 2, ISO 27001)." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_cert" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_cert" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_cert" data-step="1">+</button></div><span class="role-label">Projects @</span><div class="input-with-dollar"><input type="text" id="salary_cert" class="editable salary has-dollar" data-hidden-id="salary_cert_hidden"><input type="hidden" id="salary_cert_hidden" value="50000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_cert">$50,000</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_cert" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_cert" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_cert" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_cert">$0</div></div></td>
+                        </tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="accordion">
+                        <div class="accordion-header">Hardware &amp; Firmware Management</div>
+                        <div class="accordion-panel">
+                            <table class="comparison-table">
+                                <thead><tr><th>Role / Expense</th><th>Platform Maintenance</th><th>Gross Annual Savings</th></tr></thead>
+                                <tbody>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Hardware Engineer</span><span class="info-icon" data-description="Designs, tests, and validates telematics device hardware to ensure it communicates effectively with the data platform." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_hw_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_hw_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_hw_eng" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_hw_eng" class="editable salary has-dollar" data-hidden-id="salary_hw_eng_hidden"><input type="hidden" id="salary_hw_eng_hidden" value="175000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_hw_eng">$472,500</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_hw_eng" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_hw_eng" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_hw_eng" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_hw_eng">$0</div></div></td>
+                        </tr>
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>Firmware Developers</span><span class="info-icon" data-description="Develops and maintains the embedded software (firmware) on devices that handles data collection, processing, and transmission." tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_fw_dev" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_fw_dev" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_fw_dev" data-step="1">+</button></div><span class="role-label">Staff @</span><div class="input-with-dollar"><input type="text" id="salary_fw_dev" class="editable salary has-dollar" data-hidden-id="salary_fw_dev_hidden"><input type="hidden" id="salary_fw_dev_hidden" value="173000"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_fw_dev">$934,200</div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_fw_dev" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_fw_dev" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_fw_dev" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_fw_dev">$0</div></div></td>
+                        </tr></tbody>
+                            </table>
+                        </div>
+                    </div></div>
+        </section>
+
+        <footer class="legal-disclaimer">
+            <h4>NOTICE OF CONFIDENTIALITY AND DISCLAIMER</h4>
+            <p>This document and the information contained herein are confidential, proprietary, and the intellectual property of CalAmp. It is intended solely for the internal evaluation by the designated recipient and has been tailored for that specific audience. Reproduction, redistribution, or disclosure to any third party, particularly competitors or other vendors, is strictly prohibited without the prior written consent of CalAmp.</p>
+            <p>The financial models, calculations, and projections (including, but not limited to, ROI and savings estimates) presented in this calculator are for illustrative and informational purposes only. They are based on assumptions and data that may not reflect actual future performance. CalAmp makes no representation or warranty, express or implied, as to the accuracy, completeness, or reliability of this information and expressly disclaims any and all liability for any errors or omissions. The results generated by this tool do not constitute a guarantee of savings or financial outcomes.</p>
+            <p>© 2025 CalAmp. All Rights Reserved.</p>
+        </footer>
+    </main>
+    <div id="role_tooltip" role="tooltip"></div>
+
+    <script>
+    (function(){
+        // --- DATA & CONFIGURATION ---
+        const costItems = [
+            { category: 'Cloud Platform & Data Pipeline Development', items: [
+                { id: 'cloud_arch', name: 'System/Cloud Architect', salary: 198000, description: 'Designs the overall cloud infrastructure, ensuring scalability, reliability, and performance for the entire telematics platform.' },
+                { id: 'devops', name: 'DevOps Engineer', salary: 177000, description: 'Manages the deployment, automation, and monitoring of the cloud platform, ensuring continuous integration and delivery (CI/CD).' },
+                { id: 'db_eng', name: 'Database Engineer', salary: 180000, description: 'Manages and optimizes the databases that store massive volumes of telematics data, ensuring fast and reliable data access.' },
+                { id: 'be_dev', name: 'Backend Developers', salary: 161000, description: 'Builds and maintains the server-side logic, APIs, and data processing pipelines that power the telematics platform.' },
+                { id: 'qa', name: 'QA & Testing', salary: 140000, description: 'Performs quality assurance and testing across the entire platform, from device firmware to cloud applications, to ensure stability.' },
+                { id: 'pm', name: 'Product Manager', salary: 196000, description: 'Defines the product strategy, roadmap, and feature requirements for the in-house telematics platform.' }
+            ]},
+            { category: 'Network Infrastructure, Security & Compliance', items: [
+                { id: 'net_eng', name: 'Network Engineer', salary: 141000, description: 'Manages the networking infrastructure, including cellular connectivity, VPNs, and traffic routing for device data.' },
+                { id: 'sec_eng', name: 'Security Engineer', salary: 170000, description: 'Implements and monitors security protocols to protect device data, cloud infrastructure, and applications from threats.' },
+                { id: 'cert', name: 'Certification & Audits', salary: 50000, isProject: true, description: 'Manages costs and efforts for carrier certifications (e.g., AT&T, Verizon) and industry compliance audits (e.g., SOC 2, ISO 27001).' }
+            ]},
+            { category: 'Hardware & Firmware Management', items: [
+                { id: 'hw_eng', name: 'Hardware Engineer', salary: 175000, description: 'Designs, tests, and validates telematics device hardware to ensure it communicates effectively with the data platform.' },
+                { id: 'fw_dev', name: 'Firmware Developers', salary: 173000, description: 'Develops and maintains the embedded software (firmware) on devices that handles data collection, processing, and transmission.' }
+            ]}
+        ];
+
+        const presets = {
+            enterprise: {
+                num_units: 200000, ctc_cost: 0.75,
+                op_costs: { cloud_compute: 0.75, airtime: 0.00 },
+                staffing: [
+                    { id: 'cloud_arch', staff: 2, reallocated: 1 }, { id: 'devops', staff: 4, reallocated: 2 },
+                    { id: 'db_eng', staff: 3, reallocated: 2 }, { id: 'be_dev', staff: 5, reallocated: 3 },
+                    { id: 'qa', staff: 4, reallocated: 2 }, { id: 'pm', staff: 1, reallocated: 0 },
+                    { id: 'net_eng', staff: 2, reallocated: 1 }, { id: 'sec_eng', staff: 2, reallocated: 1 },
+                    { id: 'cert', staff: 1, reallocated: 0 }, { id: 'hw_eng', staff: 2, reallocated: 0 },
+                    { id: 'fw_dev', staff: 4, reallocated: 0 }
+                ]
+            },
+            midsize: {
+                num_units: 100000, ctc_cost: 2.25,
+                op_costs: { cloud_compute: 0.80, airtime: 0.50 },
+                staffing: [
+                    { id: 'cloud_arch', staff: 2, reallocated: 1 }, { id: 'devops', staff: 3, reallocated: 2 },
+                    { id: 'db_eng', staff: 2, reallocated: 1 }, { id: 'be_dev', staff: 4, reallocated: 3 },
+                    { id: 'qa', staff: 3, reallocated: 2 }, { id: 'pm', staff: 1, reallocated: 0 },
+                    { id: 'net_eng', staff: 2, reallocated: 2 }, { id: 'sec_eng', staff: 2, reallocated: 1 },
+                    { id: 'cert', staff: 1, reallocated: 0 }, { id: 'hw_eng', staff: 1, reallocated: 0 },
+                    { id: 'fw_dev', staff: 3, reallocated: 0 }
+                ]
+            },
+            startup: {
+                num_units: 10000, ctc_cost: 3.00,
+                op_costs: { cloud_compute: 0.95, airtime: 0.60 },
+                staffing: [
+                    { id: 'cloud_arch', staff: 1, reallocated: 0 }, { id: 'devops', staff: 0, reallocated: 0 },
+                    { id: 'db_eng', staff: 1, reallocated: 1 }, { id: 'be_dev', staff: 1, reallocated: 0 },
+                    { id: 'qa', staff: 1, reallocated: 0 }, { id: 'pm', staff: 0, reallocated: 0 },
+                    { id: 'net_eng', staff: 1, reallocated: 0 }, { id: 'sec_eng', staff: 1, reallocated: 1 },
+                    { id: 'cert', staff: 0, reallocated: 0 }, { id: 'hw_eng', staff: 1, reallocated: 0 },
+                    { id: 'fw_dev', staff: 1, reallocated: 0 }
+                ]
+            }
+        };
+
+        // --- UTILITY FUNCTIONS ---
+        function formatCurrency(num) {
+            return num.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        function animateValue(element, start, end, duration, isCurrency) {
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const currentValue = progress * (end - start) + start;
+                element.innerHTML = isCurrency ? formatCurrency(currentValue) : `${currentValue.toFixed(1)}%`;
+                if (progress < 1) window.requestAnimationFrame(step);
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // --- UI BUILDING ---
+        function buildAccordions() {
+            const accordionContainer = document.getElementById('accordion_container');
+            let fullHtml = '';
+
+            // MODIFIED: Build operational expenses accordion first
+            fullHtml += `
+            <div class="accordion" id="operational_accordion">
+                <div class="accordion-header">Operational Expenses</div>
+                <div class="accordion-panel">
+                    <table class="comparison-table">
+                        <thead><tr><th>Role / Expense</th><th>Platform Maintenance</th><th>Gross Annual Savings</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td data-label="Role / Expense">Your Cloud Cost <span class="info-icon" data-description="Enter your estimated monthly cost for cloud services (e.g., AWS, Azure, GCP) per device. This includes server hosting, data processing, storage, and egress fees.">?</span></td>
+                                <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="input_cloud_compute" data-step="0.01">-</button><div class="input-with-dollar"><input type="text" inputmode="decimal" id="input_cloud_compute" class="editable op-cost has-dollar" value="0.76"></div><button class="stepper-btn stepper-plus" data-for="input_cloud_compute" data-step="0.01">+</button></div><span class="role-label">per device/mo</span></div><span class="equals-sign">=</span><div class="cost-pill" id="display_annual_cloud_cost">$0</div></div></td>
+                                <td data-label="Gross Annual Savings"><div class="condensed-cell savings-only"><div class="savings-pill" id="savings_annual_cloud_cost">$0</div></div></td>
+                            </tr>
+                            <tr>
+                                <td data-label="Role / Expense">Your Airtime Cost <span class="info-icon" data-description="Enter your monthly cellular data (airtime) cost per device. If you purchase devices with a bundled data plan from CalAmp, this cost may be $0.">?</span></td>
+                                <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="input_airtime" data-step="0.01">-</button><div class="input-with-dollar"><input type="text" inputmode="decimal" id="input_airtime" class="editable op-cost has-dollar" value="0.00"></div><button class="stepper-btn stepper-plus" data-for="input_airtime" data-step="0.01">+</button></div><span class="role-label">per device/mo</span></div><span class="equals-sign">=</span><div class="cost-pill" id="display_annual_airtime_cost">$0</div></div></td>
+                                <td data-label="Gross Annual Savings"><div class="condensed-cell savings-only"><div class="savings-pill" id="savings_annual_airtime_cost">$0</div></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+
+            // Now build the rest of the accordions
+            costItems.forEach(category => {
+                const tableRows = category.items.map(item => {
+                    const staffLabel = item.isProject ? 'Projects' : 'Staff';
+                    return `
+                        <tr>
+                            <td data-label="Role / Expense"><div class="role-cell"><span>${item.name}</span><span class="info-icon" data-description="${item.description}" tabindex="0" aria-label="Role info">?</span></div></td>
+                            <td data-label="Platform Maintenance"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="staff_${item.id}" data-step="1">-</button><input type="text" inputmode="numeric" id="staff_${item.id}" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="staff_${item.id}" data-step="1">+</button></div><span class="role-label">${staffLabel} @</span><div class="input-with-dollar"><input type="text" id="salary_${item.id}" class="editable salary has-dollar" data-hidden-id="salary_${item.id}_hidden"><input type="hidden" id="salary_${item.id}_hidden" value="${item.salary}"></div></div><span class="equals-sign">=</span><div class="cost-pill" id="cost_${item.id}"></div></div></td>
+                            <td data-label="Gross Annual Savings"><div class="condensed-cell"><div class="input-group"><div class="stepper-container"><button class="stepper-btn stepper-minus" data-for="reallocated_${item.id}" data-step="1">-</button><input type="text" inputmode="numeric" id="reallocated_${item.id}" class="editable integer-input" value="0"><button class="stepper-btn stepper-plus" data-for="reallocated_${item.id}" data-step="1">+</button></div><span class="role-label">Reallocated</span></div><span class="equals-sign">=</span><div class="savings-pill" id="savings_${item.id}"></div></div></td>
+                        </tr>`;
+                }).join('');
+                fullHtml += `
+                    <div class="accordion">
+                        <div class="accordion-header">${category.category}</div>
+                        <div class="accordion-panel">
+                            <table class="comparison-table">
+                                <thead><tr><th>Role / Expense</th><th>Platform Maintenance</th><th>Gross Annual Savings</th></tr></thead>
+                                <tbody>${tableRows}</tbody>
+                            </table>
+                        </div>
+                    </div>`;
+            });
+            
+            if (accordionContainer) accordionContainer.innerHTML = fullHtml;
+        }
+
+        // --- CORE LOGIC ---
+        function calculateROI() {
+            const numUnits = parseFloat(document.getElementById('num_units_hidden').value) || 0;
+            const fringeBenefitRate = 1.35;
+            let totalDiyCost = 0, grossSavings = 0;
+
+            const ctcCostPerUnit = parseFloat(document.getElementById('ctc_cost_per_unit').value) || 0;
+            const cloudCostPerUnit = parseFloat(document.getElementById('input_cloud_compute').value) || 0;
+            const airtimeCostPerUnit = parseFloat(document.getElementById('input_airtime').value) || 0;
+
+            const ctcTotalCost = ctcCostPerUnit * numUnits * 12;
+            const annualCloudCost = cloudCostPerUnit * numUnits * 12;
+            const annualAirtimeCost = airtimeCostPerUnit * numUnits * 12;
+            
+            document.getElementById('display_annual_ctc_cost').innerText = formatCurrency(ctcTotalCost);
+            document.getElementById('display_annual_cloud_cost').innerText = formatCurrency(annualCloudCost);
+            document.getElementById('savings_annual_cloud_cost').innerText = formatCurrency(annualCloudCost);
+            document.getElementById('display_annual_airtime_cost').innerText = formatCurrency(annualAirtimeCost);
+            document.getElementById('savings_annual_airtime_cost').innerText = formatCurrency(annualAirtimeCost);
+
+            const opCost = annualCloudCost + annualAirtimeCost;
+            totalDiyCost += opCost;
+            grossSavings += opCost;
+
+            costItems.forEach(category => {
+                category.items.forEach(item => {
+                    const staff = parseFloat(document.getElementById(`staff_${item.id}`).value) || 0;
+                    const baseSalary = parseFloat(document.getElementById(`salary_${item.id}_hidden`).value) || 0;
+                    const salary = item.isProject ? baseSalary : baseSalary * fringeBenefitRate;
+                    
+                    const reallocatedInput = document.getElementById(`reallocated_${item.id}`);
+                    if (reallocatedInput && parseFloat(reallocatedInput.value) > staff) reallocatedInput.value = staff;
+                    const reallocated = parseFloat(reallocatedInput.value) || 0;
+                    
+                    const itemCost = staff * salary;
+                    const itemSavings = reallocated * salary;
+
+                    document.getElementById(`cost_${item.id}`).innerText = formatCurrency(itemCost);
+                    document.getElementById(`savings_${item.id}`).innerText = formatCurrency(itemSavings);
+                    totalDiyCost += itemCost;
+                    grossSavings += itemSavings;
+                });
+            });
+            
+            const netAnnualSavings = grossSavings - ctcTotalCost;
+            const roiPercentage = ctcTotalCost > 0 ? (netAnnualSavings / ctcTotalCost) * 100 : 0;
+
+            const summaryElements = [
+                { el: document.getElementById('summary_diy_cost'), val: totalDiyCost, isCur: true },
+                { el: document.getElementById('summary_ctc_cost'), val: ctcTotalCost, isCur: true },
+                { el: document.getElementById('summary_gross_savings'), val: grossSavings, isCur: true },
+                { el: document.getElementById('summary_net_savings'), val: netAnnualSavings, isCur: true },
+                { el: document.getElementById('summary_roi'), val: roiPercentage, isCur: false }
+            ];
+
+            summaryElements.forEach(s => {
+                if (!s.el) return;
+                const startValue = parseFloat(s.el.dataset.value) || 0;
+                animateValue(s.el, startValue, s.val, 500, s.isCur);
+                s.el.dataset.value = s.val;
+            });
+            
+            const netSavingsEl = document.getElementById('summary_net_savings');
+            const roiEl = document.getElementById('summary_roi');
+            if (netSavingsEl) netSavingsEl.classList.toggle('negative', netAnnualSavings < 0);
+            if (roiEl) roiEl.classList.toggle('negative', roiPercentage < 0);
+        }
+
+        function applyPreset(presetName) {
+            const preset = presets[presetName];
+            if (!preset) return;
+
+            document.querySelectorAll('.preset-button').forEach(button => {
+                button.classList.toggle('active', button.id === `preset_${presetName}`);
+            });
+            
+            document.getElementById('num_units_hidden').value = preset.num_units;
+            document.getElementById('num_units').value = preset.num_units.toLocaleString('en-US');
+            document.getElementById('ctc_cost_per_unit').value = preset.ctc_cost.toFixed(2);
+            document.getElementById('input_cloud_compute').value = preset.op_costs.cloud_compute.toFixed(2);
+            document.getElementById('input_airtime').value = preset.op_costs.airtime.toFixed(2);
+
+            preset.staffing.forEach(p => {
+                const staffEl = document.getElementById(`staff_${p.id}`);
+                if (staffEl) {
+                    staffEl.value = p.staff;
+                    document.getElementById(`reallocated_${p.id}`).value = p.reallocated;
+                }
+            });
+            calculateROI();
+        }
+
+        // --- INPUT FORMATTING ---
+        function formatInputWithCommas(inputElement) {
+            const hiddenInput = document.getElementById(inputElement.dataset.hiddenId);
+            let numericValue = inputElement.value.replace(/[^\d]/g, '');
+            hiddenInput.value = numericValue;
+            inputElement.value = numericValue ? parseInt(numericValue).toLocaleString('en-US') : '';
+        }
+        
+        function initializeCommaFormatting() {
+            document.querySelectorAll('input[data-hidden-id]').forEach(input => {
+                const hiddenInput = document.getElementById(input.dataset.hiddenId);
+                if (hiddenInput && hiddenInput.value) {
+                    input.value = parseInt(hiddenInput.value).toLocaleString('en-US');
+                }
+            });
+        }
+        
+        function formatDecimalInput(inputElement) {
+            let value = parseFloat(inputElement.value);
+            inputElement.value = isNaN(value) ? '0.00' : value.toFixed(2);
+        }
+
+        // --- INITIALIZATION & EVENT LISTENERS ---
+        buildAccordions();
+        initializeCommaFormatting();
+        applyPreset('enterprise');
+
+        const mainContainer = document.querySelector('.container');
+        const tooltip = document.getElementById('role_tooltip');
+
+        mainContainer.addEventListener('input', function(event) {
+            const t = event.target;
+            if (t.classList.contains('editable')) {
+                if (t.dataset.hiddenId) formatInputWithCommas(t);
+                else if (t.classList.contains('op-cost') || t.id === 'ctc_cost_per_unit') {
+                    let sanitized = t.value.replace(/[^0-9.]/g, '');
+                    let parts = sanitized.split('.');
+                    if (parts.length > 2) sanitized = parts[0] + '.' + parts.slice(1).join('');
+                    if (t.value !== sanitized) t.value = sanitized;
+                } else if (t.classList.contains('integer-input')) {
+                    t.value = t.value.replace(/\D/g, '');
+                }
+                calculateROI();
+            }
+        });
+
+        mainContainer.addEventListener('focusout', function(event) {
+            const t = event.target;
+            if (t.classList.contains('op-cost') || t.id === 'ctc_cost_per_unit') {
+                formatDecimalInput(t);
+            }
+        });
+
+        mainContainer.addEventListener('click', function(event) {
+            const target = event.target;
+            if (target.classList.contains('stepper-btn')) {
+                const input = document.getElementById(target.dataset.for);
+                if (!input) return;
+                const step = parseFloat(target.dataset.step);
+                let value = parseFloat(input.value) || 0;
+                value += target.classList.contains('stepper-plus') ? step : -step;
+                if (value < 0) value = 0;
+                input.value = step === 1 ? Math.round(value) : value.toFixed(2);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            if (target.classList.contains('accordion-header')) {
+                const accordion = target.parentElement;
+                accordion.classList.toggle('active');
+                const panel = accordion.querySelector('.accordion-panel');
+                panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
+            }
+            if (target.classList.contains('preset-button')) {
+                const presetName = target.id.replace('preset_', '');
+                applyPreset(presetName);
+            }
+        });
+
+        // Tooltip Logic
+        function showTooltip(e, el) { tooltip.innerHTML = el.dataset.description; tooltip.style.display = 'block'; positionTooltip(e); }
+        function positionTooltip(e){ tooltip.style.left = (e.pageX + 15) + 'px'; tooltip.style.top = (e.pageY + 15) + 'px'; }
+        mainContainer.addEventListener('mouseover', e => { if (e.target.classList.contains('info-icon')) showTooltip(e, e.target); });
+        mainContainer.addEventListener('mouseout', e => { if (e.target.classList.contains('info-icon')) tooltip.style.display = 'none'; });
+        mainContainer.addEventListener('focusin', e => { if (e.target.classList.contains('info-icon')) showTooltip(e, e.target); }, true);
+        mainContainer.addEventListener('focusout', e => { if (e.target.classList.contains('info-icon')) tooltip.style.display = 'none'; }, true);
+        document.addEventListener('mousemove', e => { if (tooltip.style.display === 'block') positionTooltip(e); });
+    })();
+    </script>
+
+
+</body></html>

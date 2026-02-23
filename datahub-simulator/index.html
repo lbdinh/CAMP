@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Telematics Dashboard</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+    <!-- Standard CDNs -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'Arial', 'Helvetica', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            blue: '#02abca',
+                            red: '#b71e1e',
+                            navy: '#1A2A38',
+                            dark: '#212529',
+                            panel: '#253746',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @keyframes dropDown {
+            0% { top: var(--start-y); opacity: 0; transform: scale(0.5); }
+            5% { opacity: 1; transform: scale(1); }
+            95% { opacity: 1; transform: scale(1); }
+            100% { top: var(--end-y); opacity: 1; transform: scale(1); }
+        }
+        @keyframes pipelineMove {
+            0% { top: var(--start-y); opacity: 0; transform: scale(0.5); }
+            3% { opacity: 1; transform: scale(1); }
+            97% { opacity: 1; transform: scale(1); }
+            100% { top: var(--end-y); opacity: 0; transform: scale(0.5); }
+        }
+        @keyframes iconTransform {
+            0% { opacity: 0; transform: scale(0.9); }
+            50% { opacity: 0.4; transform: scale(1.25); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+        @keyframes iconFadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.5); }
+        }
+        @keyframes iconFadeIn {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes iconSwapToX {
+            0% { content: 'file-json'; }
+            100% { content: 'x-circle'; color: #ef4444; }
+        }
+        @keyframes bgRed {
+            0% { background-color: #1e293b; border-color: #22c55e; }
+            100% { background-color: rgba(127, 29, 29, 0.6); border-color: rgba(239, 68, 68, 0.5); }
+        }
+        @keyframes bubbleInto {
+          0% { top: var(--start-y); opacity: 0; transform: scale(0.5); }
+          5% { opacity: 1; transform: scale(1); }
+          50% { top: var(--end-y); opacity: 1; transform: scale(1); }
+          65% { top: var(--end-y); opacity: 1; transform: scale(1.8); }
+          80% { top: var(--end-y); opacity: 0.8; transform: scale(1.4); }
+          90% { top: var(--end-y); opacity: 0.5; transform: scale(1.9); }
+          100% { top: var(--end-y); opacity: 0; transform: scale(2.0); }
+        }
+        @keyframes flushOut {
+          0% { top: var(--start-y); opacity: 0; transform: scale(0.3) translateX(var(--offset-x, 0px)); }
+          8% { opacity: 1; transform: scale(0.55) translateX(var(--offset-x, 0px)); }
+          80% { opacity: 0.9; transform: scale(0.55) translateX(0px); }
+          100% { top: var(--end-y); opacity: 0; transform: scale(0.3) translateX(0px); }
+        }
+        @keyframes ballooning {
+            0%, 100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 8px currentColor); }
+            50% { transform: translateY(-10px) scale(1.15); filter: drop-shadow(0 0 20px currentColor); }
+        }
+        @keyframes signalPulse {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; }
+            70% { opacity: 0.15; }
+            100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
+        }
+        .representative-queue {
+            animation: ballooning 2.5s ease-in-out infinite;
+        }
+        .packet-anim {
+            animation: dropDown var(--duration, 0.8s) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .packet-combined {
+            animation: pipelineMove var(--duration, 1.6s) linear forwards;
+        }
+        .packet-queue {
+            animation: bubbleInto var(--duration, 1.2s) cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        .representative-queue {
+            animation: ballooning 2s ease-in-out infinite;
+            filter: drop-shadow(0 0 12px rgba(2, 171, 202, 0.5));
+        }
+        .packet-flush {
+            animation: flushOut var(--duration, 0.4s) cubic-bezier(0.1, 0, 0.2, 1) forwards;
+        }
+        .signal-ring {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 1.5px solid rgba(34, 211, 238, 0.2);
+            border-radius: 9999px;
+            animation: signalPulse 2s ease-out infinite;
+            pointer-events: none;
+        }
+        .signal-ring.delay {
+            animation-delay: 1s;
+            border-color: rgba(103, 232, 249, 0.15);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: #02abca; cursor: pointer;
+        }
+        .lucide {
+            width: 1em;
+            height: 1em;
+        }
+    </style>
+</head>
+<body class="bg-brand-navy">
+    <div id="preview-app" class="h-screen p-4 flex items-center justify-center">
+        <div id="loading" class="text-slate-400 text-sm font-mono animate-pulse">Initializing Dashboard...</div>
+    </div>
+
+    <script>
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+        const h = React.createElement;
+
+        const MODE_LABELS = { 
+            pubsub: 'Google PUB/SUB', 
+            webhook: 'WEBHOOK', 
+            polling: 'POLLING', 
+            kinesis: 'AWS KINESIS' 
+        };
+
+        // Sub-components to optimize structure and readability
+        const Icon = ({ name, size = 16, className = "", fill = "none" }) => (
+            h('i', {
+                'data-lucide': name,
+                className: `lucide ${className}`,
+                style: { 
+                    width: size + 'px', 
+                    height: size + 'px', 
+                    display: 'inline-block',
+                    strokeWidth: 2,
+                    stroke: 'currentColor',
+                    fill: fill
+                }
+            })
+        );
+
+        const PieTimer = ({ progress, size = 32, color = "currentColor" }) => {
+            const radius = 14;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (progress / 100) * circumference;
+            
+            return h('div', { className: "relative flex items-center justify-center", style: { width: size, height: size } },
+                h('svg', { className: "transform -rotate-90", width: size, height: size, viewBox: "0 0 32 32" },
+                    // Background circle
+                    h('circle', {
+                        cx: 16, cy: 16, r: radius,
+                        fill: "none",
+                        stroke: "rgba(255,255,255,0.1)",
+                        strokeWidth: 3
+                    }),
+                    // Progress circle
+                    h('circle', {
+                        cx: 16, cy: 16, r: radius,
+                        fill: "none",
+                        stroke: color,
+                        strokeWidth: 3,
+                        strokeDasharray: circumference,
+                        strokeDashoffset: offset,
+                        strokeLinecap: "round",
+                        className: "transition-all duration-75 ease-linear"
+                    })
+                )
+            );
+        };
+
+        const StatusBadgeItem = ({ label, value, colorClass, extraClass = "" }) => (
+            h('div', { className: `${value > 0 ? `${colorClass} font-bold ${extraClass}` : "text-slate-400"}` }, 
+                `${label}: ${Math.floor(value).toLocaleString()}`
+            )
+        );
+
+        const ControlButton = ({ onClick, icon, label, isActive, activeClass, inactiveClass, isCollapsed, title, fill = "none" }) => (
+            h('button', {
+                onClick,
+                title: isCollapsed ? title : undefined,
+                className: `transition-all border-2 rounded-lg flex items-center justify-center gap-2 ${isCollapsed ? 'p-2' : 'w-full px-3 py-2.5 text-sm font-bold'} ${isActive ? activeClass : inactiveClass}`
+            },
+                h(Icon, { name: icon, size: isCollapsed ? 16 : 14, fill: isActive && fill !== "none" ? fill : "none" }),
+                !isCollapsed && label
+            )
+        );
+
+        const SliderField = ({ label, value, min, max, step, onChange, unit, colorClass = "text-brand-blue", disabled = false }) => (
+            h('div', { className: `bg-black/30 p-3 rounded-lg border border-slate-700 ${disabled ? 'opacity-50' : ''}` },
+                h('div', { className: "flex justify-between items-center mb-2" },
+                    h('span', { className: "text-[11px] text-slate-200 font-bold" }, label),
+                    h('span', { className: `text-xs font-mono ${colorClass} font-bold bg-current/10 px-1 rounded` }, 
+                        `${value.toLocaleString()}${unit ? (typeof unit === 'function' ? unit(value) : unit) : ''}`
+                    )
+                ),
+                h('input', { 
+                    type: "range", min, max, step, value, 
+                    onChange: (e) => !disabled && onChange(parseInt(e.target.value)), 
+                    disabled,
+                    className: "w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer" 
+                }),
+                h('div', { className: "flex justify-between text-[10px] text-slate-300 mt-1 font-mono font-bold" },
+                    h('span', null, min.toLocaleString()), h('span', null, max.toLocaleString())
+                )
+            )
+        );
+
+        const StageNode = ({ top, icon, title, subtitle, showDashedLine = true, children, iconColorClass = "text-slate-200", containerClass = "bg-slate-800 border-slate-500", onClick }) => {
+            const content = h('div', { 
+                className: `relative z-10 w-full border p-6 rounded-2xl flex items-center gap-5 shadow-2xl transition-all ${containerClass} ${onClick ? 'cursor-pointer' : ''}`
+            },
+                h('div', { className: `${iconColorClass}` }, h(Icon, { name: icon, size: 32 })),
+                h('div', { className: "text-left flex-1" },
+                    h('div', { className: "text-base font-black text-white tracking-wide uppercase" }, title),
+                    h('div', { className: "text-sm mt-1" }, subtitle)
+                ),
+                children
+            );
+
+            return h(onClick ? 'button' : 'div', { 
+                onClick,
+                className: "absolute w-full -translate-y-1/2", 
+                style: { top } 
+            },
+                showDashedLine && h('div', { className: "absolute top-1/2 left-full w-24 h-0.5 border-t-2 border-dashed border-slate-600 -translate-y-1/2 z-0" }),
+                content
+            );
+        };
+
+        const QueueBadge = ({ count, colorClass, label = "queued" }) => (
+            h('div', { className: "flex flex-col items-center" },
+                h('div', { className: `text-white font-black text-sm px-4 py-2 rounded-full shadow-2xl border border-white/20 ${colorClass}` }, Math.floor(count).toLocaleString()),
+                h('span', { className: `text-[10px] font-black mt-1 uppercase tracking-wider opacity-80` }, label)
+            )
+        );
+
+        const DataPacket = ({ packet, mode, flowSpeed }) => {
+            const { id, startY, endY, isLost, delay, dataType, animType, offsetX, durationFactor } = packet;
+            const duration = flowSpeed * durationFactor;
+            const isWebhookLost = mode === 'webhook' && isLost;
+            const actualEndY = endY;
+
+            const getPacketClass = (type) => {
+                if (type === 'queue') return 'packet-queue';
+                if (type === 'flush') return 'packet-flush';
+                if (type === 'combined') return 'packet-combined';
+                return 'packet-anim';
+            };
+
+            const baseStyle = {
+                top: `${startY}%`,
+                opacity: 0,
+                '--start-y': `${startY}%`,
+                '--end-y': `${actualEndY}%`,
+                '--duration': `${duration}s`,
+                '--offset-x': `${offsetX || 0}px`,
+                animationDelay: `${delay}s`,
+                ...(dataType === 'combined' && { 
+                    animationName: `pipelineMove`, 
+                    animationDuration: `${duration}s`,
+                    animationTimingFunction: 'linear'
+                })
+            };
+
+            const containerClass = `absolute left-1/2 z-20 flex items-center justify-center w-10 h-10 -ml-5 -mt-5 rounded-xl backdrop-blur-md ${
+                isLost && !isWebhookLost ? 'bg-red-900/60 border border-red-500/50 shadow-lg' :
+                dataType === 'raw' ? 'bg-amber-950/80 border border-amber-500/40 shadow-lg' :
+                dataType === 'combined' ? 'shadow-lg' :
+                'bg-slate-800 border border-green-500/50 shadow-lg'
+            }`;
+
+            if (dataType === 'combined') {
+                const totalDistance = Math.abs(parseInt(endY) - 15);
+                // hitTime is when it reaches y=38 (CTC DataHub)
+                const hitTime = duration * (23 / totalDistance);
+                // For Polling mode, packets stop at y=38, so hitTime is the end of duration
+                const actualHitTime = (mode === 'polling' && animType === 'combined') ? duration * 0.98 : hitTime;
+                const actualLostTime = isWebhookLost ? duration * (46 / totalDistance) : actualHitTime;
+
+                return h('div', { key: id, className: `${getPacketClass(animType)} ${containerClass}`, style: baseStyle },
+                    h('div', { 
+                        className: "absolute inset-0 rounded-xl bg-amber-950/80 border border-amber-500/40 flex items-center justify-center",
+                        style: { animation: `iconFadeOut 0.05s step-end forwards ${actualHitTime.toFixed(3)}s` }
+                    }, h(Icon, { name: 'binary', size: 20, className: "text-amber-400" })),
+                    
+                    h('div', { 
+                        className: `absolute inset-0 rounded-xl bg-slate-800 border border-green-500/50 flex items-center justify-center`,
+                        style: { 
+                            opacity: 0, 
+                            animation: isWebhookLost 
+                                ? `iconFadeIn 0.05s step-start forwards ${actualHitTime.toFixed(3)}s, iconFadeOut 0.05s step-start forwards ${actualLostTime.toFixed(3)}s`
+                                : `iconFadeIn 0.05s step-start forwards ${actualHitTime.toFixed(3)}s`
+                        }
+                    }, h(Icon, { name: 'file-json', size: 20, className: "text-green-400" })),
+
+                    isWebhookLost && h('div', {
+                        className: "absolute inset-0 rounded-xl flex items-center justify-center",
+                        style: { 
+                            opacity: 0,
+                            animation: `iconFadeIn 0.05s step-start forwards ${actualLostTime.toFixed(3)}s, bgRed 0.2s step-start forwards ${actualLostTime.toFixed(3)}s`
+                        }
+                    }, h(Icon, { name: 'x-circle', size: 20, className: "text-red-500" })),
+                    
+                    h('div', {
+                        className: "absolute inset-0 rounded-xl bg-white opacity-0",
+                        style: { animation: `iconTransform 0.2s ease-out ${actualHitTime.toFixed(3)}s` }
+                    })
+                );
+            }
+
+            return h('div', { key: id, className: `${getPacketClass(animType)} ${containerClass}`, style: baseStyle },
+                h(Icon, {
+                    name: isLost ? 'x-circle' : dataType === 'raw' ? 'binary' : 'file-json',
+                    size: 20,
+                    className: isLost ? "text-red-500" : dataType === 'raw' ? "text-amber-400" : "text-green-400"
+                })
+            );
+        };
+
+        function TelematicsDashboard() {
+            const [mode, setMode] = useState('pubsub');
+            const [serverOnline, setServerOnline] = useState(true);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [reportingInterval, setReportingInterval] = useState(10);
+            const [vehicleCount, setVehicleCount] = useState(1000);
+            const [isCollapsed, setIsCollapsed] = useState(false);
+            const [flowSpeed, setFlowSpeed] = useState(0.8);
+
+            const [queue, setQueue] = useState(0);
+            const [apiBuffer, setApiBuffer] = useState(0);
+            const [lost, setLost] = useState(0);
+            const [throughput, setThroughput] = useState(0);
+            const [lastLog, setLastLog] = useState("System Ready.");
+
+            const modeRef = useRef(mode);
+            const serverOnlineRef = useRef(serverOnline);
+            const queueRef = useRef(queue);
+            const apiBufferRef = useRef(apiBuffer);
+
+            const toggleServerOnline = useCallback(() => {
+                setServerOnline(prev => {
+                    const next = !prev;
+                    serverOnlineRef.current = next;
+                    return next;
+                });
+            }, []);
+
+            useEffect(() => {
+                modeRef.current = mode;
+                serverOnlineRef.current = serverOnline;
+                queueRef.current = queue;
+                apiBufferRef.current = apiBuffer;
+            });
+
+  const [pollProgress, setPollProgress] = useState(0);
+  const [pollInterval, setPollInterval] = useState(30);
+
+  const formatInterval = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+  };
+
+            const [visualPackets, setVisualPackets] = useState([]);
+            const packetIdCounter = useRef(0);
+            const fractionRef = useRef(0);
+            const prevServerOnlineRef = useRef(serverOnline);
+
+  const makePacket = useCallback((startY, endY, isLost, delay, dataType, animType = 'normal', combinedData = null) => {
+    const distance = Math.abs(endY - startY);
+    // Standardize speed: distance 70 (from 15 to 85) takes (flowSpeed * 2)
+    const durationFactor = animType === 'combined' ? (distance / 70) * 2 :
+                          animType === 'flush' ? 0.5 + Math.random() * 0.15 :
+                          animType === 'queue' ? 1.5 : 1;
+
+    return {
+      id: packetIdCounter.current++,
+      startY, endY, isLost, delay, dataType, animType,
+      distance,
+      durationFactor,
+      offsetX: animType === 'flush' ? (Math.random() - 0.5) * 30 : 0,
+      combinedData,
+      createdAt: performance.now()
+    };
+  }, []);
+
+  // Main Engine
+  useEffect(() => {
+    if (!isPlaying) { setThroughput(0); return; }
+    const messagesPerSecond = vehicleCount / (reportingInterval * 60);
+    setThroughput(messagesPerSecond.toFixed(2));
+    setLastLog(`Fleet Active: ${vehicleCount.toLocaleString()} Vehicles reporting every ${reportingInterval} min(s).`);
+
+    const tickRateMs = 250;
+    const messagesPerTick = messagesPerSecond * (tickRateMs / 1000);
+
+    const loop = setInterval(() => {
+      const currentMode = modeRef.current;
+      const currentServerOnline = serverOnlineRef.current;
+      
+      fractionRef.current += messagesPerTick;
+      const wholeMessages = Math.floor(fractionRef.current);
+      if (wholeMessages > 0) {
+        fractionRef.current -= wholeMessages;
+
+        if (currentMode === 'pubsub' || currentMode === 'kinesis') {
+          if (!currentServerOnline) setQueue(q => q + wholeMessages);
+        } else if (currentMode === 'webhook') {
+          if (!currentServerOnline) setLost(l => l + wholeMessages);
+        } else if (currentMode === 'polling') {
+          setApiBuffer(b => b + wholeMessages);
+        }
+
+        const spawnCount = Math.min(wholeMessages, 15);
+        const newPackets = [];
+        for (let i = 0; i < spawnCount; i++) {
+          const delay = Math.random() * 0.2;
+          
+          if (currentMode === 'polling') {
+            newPackets.push(makePacket(15, 38, false, delay, 'combined', 'combined', {
+              secondLegDuration: 0.6
+            }));
+          } else {
+            let jsonEndY = 85;
+            let jsonIsLost = false;
+            let jsonAnimType = 'normal';
+            if (!currentServerOnline) {
+              if (currentMode === 'pubsub' || currentMode === 'kinesis') { jsonEndY = 61; jsonAnimType = 'queue'; }
+              else if (currentMode === 'webhook') { jsonIsLost = true; }
+            }
+            
+            newPackets.push(makePacket(15, jsonEndY, jsonIsLost, delay, 'combined', 'combined', {
+              secondLegDuration: (jsonAnimType === 'queue' ? 1.0 : 0.6)
+            }));
+          }
+        }
+        setVisualPackets(prev => [...prev.slice(-150), ...newPackets]);
+      }
+    }, tickRateMs);
+    return () => clearInterval(loop);
+  }, [isPlaying, reportingInterval, vehicleCount, makePacket]);
+
+  // Cleanup
+  useEffect(() => {
+    const cleanup = setInterval(() => {
+      setVisualPackets(prev => prev.slice(-250));
+    }, 1000);
+    return () => clearInterval(cleanup);
+  }, []);
+
+  // Pub/Sub & Kinesis Drain
+  useEffect(() => {
+    const currentMode = modeRef.current;
+    if ((currentMode === 'pubsub' || currentMode === 'kinesis') && serverOnline && queue > 0) {
+      const drainInterval = setInterval(() => {
+        if (!serverOnlineRef.current) { clearInterval(drainInterval); return; }
+        const currentQueue = queueRef.current;
+        if (currentQueue <= 0) { clearInterval(drainInterval); return; }
+        
+        setQueue(prev => {
+          if (prev <= 0) return 0;
+          const drainAmount = Math.max(1, Math.ceil(prev * 0.15));
+          const visualCap = Math.min(drainAmount, 30);
+          const newPackets = Array.from({ length: visualCap }).map(() =>
+            makePacket(61, 85, false, Math.random() * 0.5, 'json', 'flush')
+          );
+          setVisualPackets(curr => [...curr, ...newPackets]);
+          return prev - drainAmount;
+        });
+      }, 250);
+      return () => clearInterval(drainInterval);
+    }
+  }, [serverOnline, mode, makePacket]);
+
+  // Polling Script
+  useEffect(() => {
+    if (mode !== 'polling') { setPollProgress(0); return; }
+    const pollTimer = setInterval(() => {
+      const currentServerOnline = serverOnlineRef.current;
+      if (!currentServerOnline) { setLastLog("Script: Server Offline. Script halted."); return; }
+      setPollProgress(prev => {
+        if (prev >= 100) {
+          const currentApiBuffer = apiBufferRef.current;
+          if (currentApiBuffer > 0) {
+            setLastLog(`Script: GET /messages -> Retrieved ${Math.floor(currentApiBuffer)} packets.`);
+            const visualCap = Math.min(currentApiBuffer, 50);
+            const newPackets = Array.from({ length: visualCap }).map(() =>
+              makePacket(38, 85, false, Math.random() * 0.6, 'json', 'flush')
+            );
+            setVisualPackets(curr => [...curr, ...newPackets]);
+            setApiBuffer(0);
+          }
+          return 0;
+        }
+        return prev + (100 / ((pollInterval * 1000) / 100));
+      });
+    }, 100);
+    return () => clearInterval(pollTimer);
+  }, [mode, pollInterval, makePacket]);
+
+  // On server going offline, reroute in-flight packets that haven't crossed the buffer line yet
+  useEffect(() => {
+    const wasOnline = prevServerOnlineRef.current;
+    prevServerOnlineRef.current = serverOnline;
+    if (serverOnline || !wasOnline) return;
+
+    const currentMode = modeRef.current;
+    if (!(currentMode === 'pubsub' || currentMode === 'kinesis')) return;
+
+        const now = performance.now();
+        let reroutedCount = 0;
+        setVisualPackets(prev => {
+          return prev.map(p => {
+        if (p.endY !== 85) return p;
+        if (p.animType === 'flush') return p;
+        if (p.dataType !== 'combined') return p;
+
+        const startY = p.startY;
+        const endY = p.endY;
+        const totalDistance = endY - startY;
+        if (totalDistance <= 0) return p;
+
+        const cutoffY = 61;
+        const cutoffDistance = cutoffY - startY;
+        if (cutoffDistance <= 0) return p;
+
+        const duration = flowSpeed * p.durationFactor;
+        const cutoffTime = duration * (cutoffDistance / totalDistance);
+        const elapsed = (now - p.createdAt) / 1000 - p.delay;
+        if (elapsed >= cutoffTime) return p; // already past buffer line
+
+        const progress = Math.max(0, elapsed) / duration;
+        const currentY = startY + totalDistance * Math.min(progress, 1);
+        const remaining = Math.max(0.15, cutoffTime - Math.max(0, elapsed));
+        reroutedCount += 1;
+        return {
+          ...p,
+          startY: currentY,
+          endY: cutoffY,
+          distance: Math.abs(cutoffY - currentY),
+          durationFactor: remaining / flowSpeed,
+          animType: 'queue'
+        };
+      });
+    });
+
+    if (reroutedCount > 0) {
+      setQueue(q => q + reroutedCount);
+    }
+  }, [serverOnline, flowSpeed]);
+
+            // Initialize Lucide icons after each render
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            });
+
+            // Reset on mode change
+            useEffect(() => {
+                setQueue(0); setLost(0); setApiBuffer(0); setVisualPackets([]);
+                setIsPlaying(false);
+                setLastLog(`Switched to ${MODE_LABELS[mode]} Mode.`);
+            }, [mode]);
+
+            const isLayer3Offline = !serverOnline && (mode === 'webhook' || mode === 'polling');
+
+            return h('div', { className: "absolute inset-0 bg-brand-navy text-slate-100 font-sans overflow-hidden flex flex-col border border-slate-700 rounded-xl shadow-2xl" },
+                /* Header */
+                h('div', { className: "flex-none h-16 border-b border-slate-700 bg-black/30 flex items-center justify-between px-8 z-30 backdrop-blur-md" },
+                    h('div', { className: "flex items-end h-full pt-2" },
+                        Object.keys(MODE_LABELS).map(m => 
+                            h('button', {
+                                key: m,
+                                onClick: () => setMode(m),
+                                className: `px-6 py-2.5 rounded-t-xl text-sm font-black transition-all relative -mb-[1px] border-x border-t ${
+                                    mode === m 
+                                    ? 'bg-brand-navy text-brand-blue border-slate-700 shadow-[0_-4px_10px_rgba(0,0,0,0.3)] z-10' 
+                                    : 'bg-black/20 text-slate-400 border-transparent hover:text-white hover:bg-black/30'
+                                }`
+                            }, 
+                                MODE_LABELS[m],
+                                mode === m && h('div', { className: "absolute bottom-0 left-0 right-0 h-0.5 bg-brand-blue shadow-[0_-2px_6px_rgba(2,171,202,0.5)]" })
+                            )
+                        )
+                    ),
+                    h('div', { className: "flex items-center gap-8" },
+                        h('div', { className: "flex items-center gap-3 text-green-400 bg-green-950/40 px-4 py-2 rounded-full border border-green-500/50" },
+                            h('span', { className: "text-sm font-mono font-bold" }, throughput, " msgs/sec")
+                        ),
+                        h('div', { className: "text-xs font-mono text-right flex flex-col gap-1.5" },
+                            (mode === 'pubsub' || mode === 'kinesis') && h(StatusBadgeItem, { label: "QUEUE", value: queue, colorClass: "text-yellow-300" }),
+                            mode === 'polling' && h(StatusBadgeItem, { label: "CLOUD BUFFER", value: apiBuffer, colorClass: "text-purple-300" }),
+                            h(StatusBadgeItem, { label: "LOST", value: lost, colorClass: "text-red-400", extraClass: "underline" })
+                        )
+                    )
+                ),
+
+                /* Main Area */
+                h('div', { className: "flex-1 relative flex justify-center items-center z-10 min-h-0" },
+                    /* LEFT CONTROL PANEL */
+                    h('div', { className: `absolute left-3 top-3 bottom-3 ${isCollapsed ? 'w-12' : 'w-52'} transition-all duration-300 ease-in-out bg-brand-panel/95 backdrop-blur-md border border-slate-600 rounded-xl flex flex-col z-40 overflow-hidden shadow-2xl` },
+                        /* Header with Collapse Button */
+                        h('div', { className: "flex items-center justify-between p-4 border-b border-slate-700" },
+                            !isCollapsed && h('div', { className: "flex items-center gap-2" },
+                                h(Icon, { name: 'sliders-horizontal', size: 14, className: "text-slate-300" }),
+                                h('span', { className: "text-sm font-bold text-slate-100 uppercase tracking-wider" }, "Controls")
+                            ),
+                            h('button', {
+                                onClick: () => setIsCollapsed(!isCollapsed),
+                                className: `p-1 rounded-md hover:bg-slate-700 transition-colors text-slate-300 ${isCollapsed ? 'w-full flex justify-center' : ''}`
+                            },
+                                h(Icon, { name: isCollapsed ? 'chevron-right' : 'chevron-left', size: 18 })
+                            )
+                        ),
+
+                        h('div', { className: `flex-1 ${isCollapsed ? 'p-2 pt-6 items-center' : 'p-4 overflow-y-auto'} flex flex-col gap-3.5` },
+                            h(ControlButton, {
+                                onClick: () => setIsPlaying(!isPlaying),
+                                icon: isPlaying ? 'pause' : 'play',
+                                label: isPlaying ? 'STOP FLEET' : 'START FLEET',
+                                isActive: isPlaying,
+                                activeClass: 'bg-brand-red/30 border-brand-red text-white hover:bg-brand-red/50 shadow-[0_0_15px_rgba(183,30,30,0.3)]',
+                                inactiveClass: 'bg-green-600/30 border-green-500 text-green-100 hover:bg-green-600/50 shadow-[0_0_15px_rgba(34,197,94,0.3)]',
+                                isCollapsed,
+                                title: isPlaying ? 'Stop Fleet' : 'Start Fleet',
+                                fill: 'currentColor'
+                            }),
+                            h(ControlButton, {
+                                onClick: toggleServerOnline,
+                                icon: serverOnline ? 'wifi' : 'wifi-off',
+                                label: serverOnline ? 'Server: ONLINE' : 'Server: OFFLINE',
+                                isActive: serverOnline,
+                                activeClass: 'bg-green-600/20 border-green-500/50 text-green-100 hover:bg-green-600/30',
+                                inactiveClass: 'bg-red-600/20 border-red-500/50 text-red-100 hover:bg-red-600/30',
+                                isCollapsed,
+                                title: serverOnline ? 'Server: Online' : 'Server: Offline'
+                            }),
+
+                            !isCollapsed && h(React.Fragment, null,
+                                h(SliderField, {
+                                    label: "# OF VEHICLES",
+                                    value: vehicleCount,
+                                    min: 100, max: 10000, step: 100,
+                                    onChange: setVehicleCount
+                                }),
+                                h(SliderField, {
+                                    label: "REPORTING INTERVAL",
+                                    value: reportingInterval,
+                                    min: 1, max: 30, step: 1,
+                                    onChange: setReportingInterval,
+                                    unit: (v) => ` min${v > 1 ? 's' : ''}`
+                                }),
+                                h(SliderField, {
+                                    label: "FLOW SPEED",
+                                    value: Math.round((2.1 - flowSpeed) * 10),
+                                    min: 1, max: 20, step: 1,
+                                    onChange: (v) => setFlowSpeed(2.1 - (v / 10)),
+                                    unit: "x"
+                                }),
+                                mode === 'polling' && h(SliderField, {
+                                    label: "POLL INTERVAL",
+                                    value: pollInterval,
+                                    min: 5, max: 1000, step: 5,
+                                    onChange: setPollInterval,
+                                    unit: "s",
+                                    colorClass: "text-purple-300",
+                                    disabled: !serverOnline
+                                }),
+                                h('div', { className: "mt-auto pt-4 border-t border-slate-700" },
+                                    h('div', { className: "text-xs text-slate-100 mb-3 font-black tracking-wider" }, "DATA FORMAT"),
+                                    h('div', { className: "flex flex-col gap-3" },
+                                        [
+                                            { icon: 'binary', label: 'Raw Telemetry', bg: 'bg-amber-900/60', border: 'border-amber-500/60', color: 'text-amber-300' },
+                                            { icon: 'file-json', label: 'Decoded JSON', bg: 'bg-slate-700', border: 'border-green-500/60', color: 'text-green-300' }
+                                        ].map(item => (
+                                            h('div', { key: item.label, className: "flex items-center gap-3" },
+                                                h('div', { className: `w-8 h-8 ${item.bg} ${item.border} border rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm` },
+                                                    h(Icon, { name: item.icon, size: 16, className: item.color })
+                                                ),
+                                                h('span', { className: "text-sm text-slate-200 font-bold" }, item.label)
+                                            )
+                                        ))
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    /* CENTER CONTENT */
+                    h('div', { className: "relative w-full max-w-5xl h-full flex justify-center" },
+                        /* LEFT COLUMN: Stages */
+                        h('div', { className: "relative w-96 h-full z-20" },
+                            /* 1. TRUCK */
+                            h(StageNode, {
+                                top: '15%', icon: 'truck',
+                                title: `${vehicleCount.toLocaleString()} VEHICLES`,
+                                subtitle: isPlaying 
+                                    ? h('span', { className: "text-green-400 font-mono font-black" }, `● Every ${reportingInterval}m`)
+                                    : h('span', { className: "text-slate-400 font-bold" }, "○ Offline")
+                            },
+                                h('div', { className: "ml-auto flex items-end gap-1.5 relative" },
+                                    /* Centered Broadcast Animation tied to isPlaying */
+                                    isPlaying && h(React.Fragment, null,
+                                        h('span', { className: "signal-ring", style: { width: '120px', height: '120px' } }),
+                                        h('span', { className: "signal-ring delay", style: { width: '120px', height: '120px' } })
+                                    ),
+                                    h('div', { className: "flex items-end gap-1.5 relative z-10" },
+                                        [
+                                            { size: 24, opacity: 'opacity-40', offset: '4px' },
+                                            { size: 40, opacity: 'opacity-100', offset: '0' },
+                                            { size: 24, opacity: 'opacity-20', offset: '4px' }
+                                        ].map((tower, i) => (
+                                            h('span', { 
+                                                key: i, 
+                                                className: `relative flex items-center justify-center transition-all duration-500 ${isPlaying ? tower.opacity : 'opacity-20'}`, 
+                                                style: { marginBottom: tower.offset } 
+                                            },
+                                                h(Icon, { 
+                                                    name: 'radio-tower', 
+                                                    size: tower.size, 
+                                                    className: `text-cyan-400 transition-all duration-500 ${isPlaying ? 'drop-shadow-[0_0_15px_rgba(34,211,238,0.9)]' : ''}` 
+                                                })
+                                            )
+                                        ))
+                                    )
+                                )
+                            ),
+
+                            /* CTC DataHub Cloud Outline (Conditional) */
+                            mode === 'pubsub' && h('div', { className: "absolute -inset-x-10 top-[26%] bottom-[26%] z-0 pointer-events-none" },
+                                h('div', { className: "absolute inset-0 border-2 border-blue-500/20 bg-blue-500/5 rounded-[3rem]" }),
+                                h('svg', { className: "absolute inset-0 w-full h-full" },
+                                    h('rect', { 
+                                        x: "2", y: "2", width: "calc(100% - 4px)", height: "calc(100% - 4px)", 
+                                        rx: "48", ry: "48", fill: "none", stroke: "#3b82f6", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
+                                    })
+                                ),
+                                h('span', { className: "absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border border-blue-500/50 text-[12px] text-blue-400 font-black tracking-widest uppercase shadow-[0_0_20px_rgba(59,130,246,0.5)] z-10 whitespace-nowrap" }, "Google Pub/Sub Instance")
+                            ),
+
+                            /* 2. CTC DATAHUB */
+                            h(StageNode, {
+                                top: '38%', icon: 'cloud-cog', title: "CTC DataHub", subtitle: "Decode and Enrich Data",
+                                iconColorClass: "text-brand-blue",
+                                containerClass: "bg-slate-800/80 border-slate-600 backdrop-blur-md"
+                            }, 
+                                mode === 'polling' && apiBuffer > 0 && h(QueueBadge, { count: apiBuffer, colorClass: "bg-purple-600", label: "queued" })
+                            ),
+
+                            /* Customer Infra / AWS Cloud Outline */
+                            (mode === 'webhook' || mode === 'polling' || mode === 'kinesis') && h('div', { 
+                                className: `absolute -inset-x-10 top-[49%] bottom-[1.5%] z-0 pointer-events-none`
+                            },
+                                h('div', { className: `absolute inset-0 border-2 rounded-[3rem] ${mode === 'kinesis' ? 'border-teal-500/20 bg-teal-500/5' : 'border-slate-500/20 bg-slate-500/5'}` }),
+                                h('svg', { className: "absolute inset-0 w-full h-full" },
+                                    h('rect', { 
+                                        x: "2", y: "2", width: "calc(100% - 4px)", height: "calc(100% - 4px)", 
+                                        rx: "48", ry: "48", fill: "none", stroke: mode === 'kinesis' ? "#14b8a6" : "#64748b", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
+                                    })
+                                ),
+                                h('span', { className: `absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border text-[12px] font-black tracking-widest uppercase z-10 whitespace-nowrap ${mode === 'kinesis' ? 'border-teal-500/50 text-teal-400 shadow-[0_0_20px_rgba(20,184,166,0.5)]' : 'border-slate-500/50 text-slate-300 shadow-[0_0_20px_rgba(148,163,184,0.5)]'}` }, 
+                                    mode === 'kinesis' ? "AWS CLOUD" : "CUSTOMER INFRASTRUCTURE"
+                                )
+                            ),
+
+                            /* 3. INTEGRATION LAYER */
+                            h(StageNode, {
+                                top: '61%',
+                                icon: mode === 'pubsub' ? 'database' : mode === 'webhook' ? 'zap' : mode === 'polling' ? 'file-code' : 'waves',
+                                title: MODE_LABELS[mode].replace('AWS KINESIS', 'AWS KINESIS STREAM') + (mode === 'webhook' ? ' ENDPOINT' : mode === 'polling' ? ' SCRIPT' : ''),
+                                subtitle: mode === 'polling' ? (isLayer3Offline ? 'Offline (Server Down)' : `Polling every ${formatInterval(pollInterval)}`) : 
+                                          mode === 'kinesis' ? (!serverOnline ? 'Buffering in Stream (Server Down)' : 'Managed Stream Delivery') : 
+                                          (isLayer3Offline ? 'Offline (Server Down)' : mode === 'pubsub' ? 'Guaranteed Delivery' : 'Receives HTTP POST'),
+                                containerClass: isLayer3Offline ? 'bg-slate-900 border-slate-700 opacity-60' :
+                                               mode === 'pubsub' ? (queue > 0 ? 'bg-blue-900/40 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-slate-800/90 border-slate-600') :
+                                               mode === 'webhook' ? 'bg-orange-950/30 border-orange-500/50' :
+                                               mode === 'kinesis' ? (queue > 0 ? 'bg-teal-900/40 border-teal-500 shadow-[0_0_20px_rgba(20,184,166,0.2)]' : 'bg-teal-900/20 border-teal-500/50') :
+                                               'bg-purple-900/30 border-purple-500/50',
+                                iconColorClass: isLayer3Offline ? 'text-slate-500' : 
+                                               mode === 'pubsub' ? 'text-blue-300' : 
+                                               mode === 'webhook' ? 'text-orange-300' : 
+                                               mode === 'kinesis' ? 'text-teal-300' : 'text-purple-300'
+                            },
+                                mode === 'polling' && !isLayer3Offline && h('div', { className: "ml-auto" },
+                                    h(PieTimer, { progress: pollProgress, size: 36, color: "#a855f7" })
+                                ),
+                                (mode === 'pubsub' || mode === 'kinesis') && queue > 0 && h(QueueBadge, { count: queue, colorClass: mode === 'kinesis' ? 'bg-teal-600' : 'bg-blue-600' })
+                            ),
+
+                            /* 4. SERVER */
+                            h(StageNode, {
+                                top: '85%', icon: 'server', title: "YOUR SERVER",
+                                subtitle: h('span', { className: `font-black ${serverOnline ? 'text-green-300' : 'text-red-300'}` }, serverOnline ? 'ONLINE' : 'OFFLINE (Click to Toggle)'),
+                                containerClass: serverOnline ? 'bg-green-600/30 border-green-400 shadow-[0_0_25px_rgba(34,197,94,0.25)]' : 'bg-red-600/30 border-red-500 shadow-[0_0_25px_rgba(239,68,68,0.25)]',
+                                iconColorClass: serverOnline ? 'text-green-300' : 'text-red-300',
+                                onClick: toggleServerOnline
+                            },
+                                h('div', { className: "ml-auto" }, h(Icon, { name: serverOnline ? 'wifi' : 'wifi-off', size: 28, className: serverOnline ? "text-green-400" : "text-red-400" }))
+                            )
+                        ),
+
+                        /* RIGHT COLUMN: Animation Track */
+                        h('div', { className: "relative w-28 h-full ml-32 z-10 flex flex-col items-center" },
+                            h('div', { className: "mt-[10%] mb-2 bg-brand-navy px-3 py-1 rounded-md border border-slate-700/50 text-[11px] text-brand-blue font-black tracking-widest uppercase whitespace-nowrap z-20 shadow-lg" }, "Data Flow"),
+                            h('div', { 
+                                className: "relative w-full flex-1 bg-slate-900/40 border border-slate-800/80 rounded-[3rem] flex justify-center shadow-inner overflow-hidden",
+                                style: { marginBottom: '10%' }
+                            },
+                                h('svg', { className: "w-full h-full text-brand-blue/60 drop-shadow-[0_0_10px_rgba(2,171,202,0.4)]", viewBox: "0 0 100 1000", preserveAspectRatio: "none", fill: "currentColor" },
+                                    h('path', { d: "M42 0 H58 V970 L72 970 L50 1000 L28 970 L42 970 Z" })
+                                )
+                            ),
+
+                            /* Representative Queue Icon - Persistent when queued/buffering */
+                            (mode === 'pubsub' || mode === 'kinesis') && queue > 0 && h('div', { 
+                                className: `absolute left-1/2 z-40 -ml-8 -mt-8 w-16 h-16 rounded-2xl flex items-center justify-center border-2 backdrop-blur-lg representative-queue ${mode === 'kinesis' ? 'bg-teal-900/40 border-teal-500/50 text-teal-400' : 'bg-blue-900/40 border-blue-500/50 text-blue-400'}`,
+                                style: { top: '61%' } 
+                            }, h(Icon, { name: mode === 'kinesis' ? 'waves' : 'database', size: 40 })),
+
+                            mode === 'polling' && apiBuffer > 0 && h('div', { 
+                                className: "absolute left-1/2 z-40 -ml-10 -mt-10 w-20 h-20 rounded-[1.5rem] flex items-center justify-center border-2 backdrop-blur-lg representative-queue bg-green-900/40 border-green-500/50 text-green-400",
+                                style: { top: '38%' } 
+                            }, h(Icon, { name: 'file-json', size: 52 })),
+
+                            visualPackets.map(p => h(DataPacket, { key: p.id, packet: p, mode, flowSpeed }))
+                        )
+                    )
+                ),
+
+                /* Footer */
+                h('div', { className: "flex-none h-12 bg-black/40 border-t border-slate-700 flex items-center px-8 overflow-hidden z-30 backdrop-blur-sm" },
+                    h(Icon, { name: 'activity', size: 18, className: "text-brand-blue mr-4 animate-pulse flex-shrink-0" }),
+                    h('span', { className: "text-sm font-mono text-white font-bold truncate" }, lastLog)
+                )
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('preview-app'));
+        root.render(React.createElement(TelematicsDashboard));
+    </script>
+</body>
+</html>
+
+
+
