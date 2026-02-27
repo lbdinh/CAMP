@@ -599,19 +599,26 @@
             return h('div', { className: "absolute inset-0 bg-brand-navy text-slate-100 font-sans overflow-hidden flex flex-col border border-slate-700 rounded-xl shadow-2xl" },
                 /* Header */
                 h('div', { className: "flex-none h-16 border-b border-slate-700 bg-black/30 flex items-center justify-between px-8 z-30 backdrop-blur-md" },
-                    h('div', { className: "flex items-end h-full pt-2" },
-                        Object.keys(MODE_LABELS).map(m => 
-                            h('button', {
-                                key: m,
-                                onClick: () => setMode(m),
-                                className: `px-6 py-2.5 rounded-t-xl text-sm font-black transition-all relative -mb-[1px] border-x border-t ${
-                                    mode === m 
-                                    ? 'bg-brand-navy text-brand-blue border-slate-700 shadow-[0_-4px_10px_rgba(0,0,0,0.3)] z-10' 
-                                    : 'bg-black/20 text-slate-400 border-transparent hover:text-white hover:bg-black/30'
-                                }`
-                            }, 
-                                MODE_LABELS[m],
-                                mode === m && h('div', { className: "absolute bottom-0 left-0 right-0 h-0.5 bg-brand-blue shadow-[0_-2px_6px_rgba(2,171,202,0.5)]" })
+                    h('div', { className: "flex items-center h-full" },
+                        h('img', { 
+                            src: "../CA_Logo_Color-white.png", 
+                            alt: "CalAmp", 
+                            className: "h-7 w-auto mr-10 opacity-90 hover:opacity-100 transition-opacity" 
+                        }),
+                        h('div', { className: "flex items-end h-full pt-2" },
+                            Object.keys(MODE_LABELS).map(m => 
+                                h('button', {
+                                    key: m,
+                                    onClick: () => setMode(m),
+                                    className: `px-6 py-2.5 rounded-t-xl text-sm font-black transition-all relative -mb-[1px] border-x border-t ${
+                                        mode === m 
+                                        ? 'bg-brand-navy text-brand-blue border-slate-700 shadow-[0_-4px_10px_rgba(0,0,0,0.3)] z-10' 
+                                        : 'bg-black/20 text-slate-400 border-transparent hover:text-white hover:bg-black/30'
+                                    }`
+                                }, 
+                                    MODE_LABELS[m],
+                                    mode === m && h('div', { className: "absolute bottom-0 left-0 right-0 h-0.5 bg-brand-blue shadow-[0_-2px_6px_rgba(2,171,202,0.5)]" })
+                                )
                             )
                         )
                     ),
@@ -758,18 +765,6 @@
                                 )
                             ),
 
-                            /* CTC DataHub Cloud Outline (Conditional) */
-                            mode === 'pubsub' && h('div', { className: "absolute -inset-x-10 top-[26%] bottom-[26%] z-0 pointer-events-none" },
-                                h('div', { className: "absolute inset-0 border-2 border-blue-500/20 bg-blue-500/5 rounded-[3rem]" }),
-                                h('svg', { className: "absolute inset-0 w-full h-full" },
-                                    h('rect', { 
-                                        x: "2", y: "2", width: "calc(100% - 4px)", height: "calc(100% - 4px)", 
-                                        rx: "48", ry: "48", fill: "none", stroke: "#3b82f6", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
-                                    })
-                                ),
-                                h('span', { className: "absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border border-blue-500/50 text-[12px] text-blue-400 font-black tracking-widest uppercase shadow-[0_0_20px_rgba(59,130,246,0.5)] z-10 whitespace-nowrap" }, "Google Pub/Sub Instance")
-                            ),
-
                             /* 2. CTC DATAHUB */
                             h(StageNode, {
                                 top: '38%', icon: 'cloud-cog', title: "CTC DataHub", subtitle: "Decode and Enrich Data",
@@ -779,19 +774,19 @@
                                 mode === 'polling' && apiBuffer > 0 && h(QueueBadge, { count: apiBuffer, colorClass: "bg-purple-600", label: "queued" })
                             ),
 
-                            /* Customer Infra / AWS Cloud Outline */
-                            (mode === 'webhook' || mode === 'polling' || mode === 'kinesis') && h('div', { 
+                            /* Customer Infra / Cloud Outline */
+                            (mode === 'webhook' || mode === 'polling' || mode === 'kinesis' || mode === 'pubsub') && h('div', { 
                                 className: `absolute -inset-x-10 top-[49%] bottom-[1.5%] z-0 pointer-events-none`
                             },
-                                h('div', { className: `absolute inset-0 border-2 rounded-[3rem] ${mode === 'kinesis' ? 'border-teal-500/20 bg-teal-500/5' : 'border-slate-500/20 bg-slate-500/5'}` }),
+                                h('div', { className: `absolute inset-0 border-2 rounded-[3rem] ${mode === 'kinesis' ? 'border-teal-500/20 bg-teal-500/5' : mode === 'pubsub' ? 'border-blue-500/20 bg-blue-500/5' : 'border-slate-500/20 bg-slate-500/5'}` }),
                                 h('svg', { className: "absolute inset-0 w-full h-full" },
                                     h('rect', { 
                                         x: "2", y: "2", width: "calc(100% - 4px)", height: "calc(100% - 4px)", 
-                                        rx: "48", ry: "48", fill: "none", stroke: mode === 'kinesis' ? "#14b8a6" : "#64748b", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
+                                        rx: "48", ry: "48", fill: "none", stroke: mode === 'kinesis' ? "#14b8a6" : mode === 'pubsub' ? "#3b82f6" : "#64748b", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
                                     })
                                 ),
-                                h('span', { className: `absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border text-[12px] font-black tracking-widest uppercase z-10 whitespace-nowrap ${mode === 'kinesis' ? 'border-teal-500/50 text-teal-400 shadow-[0_0_20px_rgba(20,184,166,0.5)]' : 'border-slate-500/50 text-slate-300 shadow-[0_0_20px_rgba(148,163,184,0.5)]'}` }, 
-                                    mode === 'kinesis' ? "AWS CLOUD" : "CUSTOMER INFRASTRUCTURE"
+                                h('span', { className: `absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border text-[12px] font-black tracking-widest uppercase z-10 whitespace-nowrap ${mode === 'kinesis' ? 'border-teal-500/50 text-teal-400 shadow-[0_0_20px_rgba(20,184,166,0.5)]' : mode === 'pubsub' ? 'border-blue-500/50 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.5)]' : 'border-slate-500/50 text-slate-300 shadow-[0_0_20px_rgba(148,163,184,0.5)]'}` }, 
+                                    mode === 'kinesis' ? "AWS CLOUD" : mode === 'pubsub' ? "GOOGLE CLOUD" : "CUSTOMER INFRASTRUCTURE"
                                 )
                             ),
 
@@ -799,7 +794,7 @@
                             h(StageNode, {
                                 top: '61%',
                                 icon: mode === 'pubsub' ? 'database' : mode === 'webhook' ? 'zap' : mode === 'polling' ? 'file-code' : 'waves',
-                                title: MODE_LABELS[mode].replace('AWS KINESIS', 'AWS KINESIS STREAM') + (mode === 'webhook' ? ' ENDPOINT' : mode === 'polling' ? ' SCRIPT' : ''),
+                                title: MODE_LABELS[mode].replace('AWS KINESIS', 'AWS KINESIS STREAM').replace('Google PUB/SUB', 'Google Pub/Sub Topic') + (mode === 'webhook' ? ' ENDPOINT' : mode === 'polling' ? ' SCRIPT' : ''),
                                 subtitle: mode === 'polling' ? (isLayer3Offline ? 'Offline (Server Down)' : `Polling every ${formatInterval(pollInterval)}`) : 
                                           mode === 'kinesis' ? (!serverOnline ? 'Buffering in Stream (Server Down)' : 'Managed Stream Delivery') : 
                                           (isLayer3Offline ? 'Offline (Server Down)' : mode === 'pubsub' ? 'Guaranteed Delivery' : 'Receives HTTP POST'),
@@ -860,9 +855,12 @@
                 ),
 
                 /* Footer */
-                h('div', { className: "flex-none h-12 bg-black/40 border-t border-slate-700 flex items-center px-8 overflow-hidden z-30 backdrop-blur-sm" },
-                    h(Icon, { name: 'activity', size: 18, className: "text-brand-blue mr-4 animate-pulse flex-shrink-0" }),
-                    h('span', { className: "text-sm font-mono text-white font-bold truncate" }, lastLog)
+                h('div', { className: "flex-none h-12 bg-black/40 border-t border-slate-700 flex items-center justify-between px-8 overflow-hidden z-30 backdrop-blur-sm" },
+                    h('div', { className: "flex items-center" },
+                        h(Icon, { name: 'activity', size: 18, className: "text-brand-blue mr-4 animate-pulse flex-shrink-0" }),
+                        h('span', { className: "text-sm font-mono text-white font-bold truncate" }, lastLog)
+                    ),
+                    h('span', { className: "text-[10px] text-slate-500 font-bold tracking-widest uppercase" }, "© 2026 CalAmp")
                 )
             );
         }
