@@ -1,0 +1,806 @@
+<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com https://storage.googleapis.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Driver Monitoring System - High Res</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- MediaPipe for Face & Eye Tracking -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    
+    <!-- MediaPipe Tasks Vision for Object Detection -->
+
+    <style>
+        .alert-flash { animation: flash 1s infinite; }
+        @keyframes flash {
+            0% { background-color: rgba(239, 68, 68, 0.2); border-color: rgb(239, 68, 68); }
+            50% { background-color: rgba(239, 68, 68, 0.5); border-color: rgb(220, 38, 38); }
+            100% { background-color: rgba(239, 68, 68, 0.2); border-color: rgb(239, 68, 68); }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans min-h-screen flex flex-col relative">
+
+    <!-- Header -->
+    <header class="absolute top-0 left-0 right-0 z-40 bg-slate-900/70 backdrop-blur p-4 border-b border-slate-700 flex justify-between items-center">
+        <div>
+            <h1 class="text-xl font-bold text-blue-400">DMS Prototype v2</h1>
+            <p class="text-xs text-slate-400">High-Res with Temporal Smoothing</p>
+        </div>
+        <button id="startBtn" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded font-bold transition-colors">
+            Start System
+        </button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 relative w-full h-screen overflow-hidden">
+
+        <!-- Left Control Panel -->
+        <aside class="absolute top-20 left-4 z-30 w-80 max-w-[92vw] bg-slate-800/95 backdrop-blur p-5 rounded-lg border border-slate-700 flex flex-col gap-4">
+            <div class="flex items-end justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold mb-1">Controls</h2>
+                    <p class="text-xs text-slate-400">Use sliders to tune the demo live.</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                <div class="flex items-end justify-between">
+                    <span class="text-slate-300 text-sm">Speed</span>
+                    <span id="speedValue" class="text-2xl font-bold text-cyan-300">35 mph</span>
+                </div>
+                <input id="speedSlider" type="range" min="0" max="85" value="35" class="w-full mt-3 accent-cyan-400">
+                <div class="flex justify-between text-xs text-slate-500 mt-1">
+                    <span>0</span><span>40</span><span>85+</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-lg p-4 border border-slate-700 space-y-3">
+                <div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300">EAR Threshold</span>
+                        <span id="earValue" class="text-slate-200 font-semibold">0.22</span>
+                    </div>
+                    <input id="earSlider" type="range" min="0.15" max="0.30" step="0.01" value="0.22" class="w-full mt-2 accent-cyan-400">
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300">Drowsy Frames</span>
+                        <span id="drowsyValue" class="text-slate-200 font-semibold">10</span>
+                    </div>
+                    <input id="drowsySlider" type="range" min="6" max="24" step="1" value="10" class="w-full mt-2 accent-cyan-400">
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300">Distracted Frames</span>
+                        <span id="distractedValue" class="text-slate-200 font-semibold">15</span>
+                    </div>
+                    <input id="distractedSlider" type="range" min="8" max="30" step="1" value="15" class="w-full mt-2 accent-cyan-400">
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-lg p-4 border border-slate-700 space-y-3">
+                <div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300">Off-Road Alert (ms)</span>
+                        <span id="offroadValue" class="text-slate-200 font-semibold">2000</span>
+                    </div>
+                    <input id="offroadSlider" type="range" min="1200" max="4000" step="100" value="2000" class="w-full mt-2 accent-cyan-400">
+                </div>
+                <div>
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-300">Phone Confidence</span>
+                        <span id="phoneValue" class="text-slate-200 font-semibold">0.55</span>
+                    </div>
+                    <input id="phoneSlider" type="range" min="0.40" max="0.80" step="0.01" value="0.55" class="w-full mt-2 accent-cyan-400">
+                </div>
+            </div>
+
+            <div class="bg-slate-900 rounded-lg p-4 border border-slate-700 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-300 text-sm">Miles Driven</span>
+                    <span id="milesValue" class="text-slate-100 font-semibold">0.00 mi</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-300 text-sm">Total Infractions</span>
+                    <span id="infractionsValue" class="text-slate-100 font-semibold">0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-slate-300 text-sm">Infractions / 100 mi</span>
+                    <span id="infractionsRate" class="text-red-300 font-semibold">0.0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Status Panel -->
+        <aside class="absolute top-20 right-4 z-30 w-80 max-w-[92vw] bg-slate-800/95 backdrop-blur p-5 rounded-lg border border-slate-700 flex flex-col gap-4">
+            <div>
+                <h2 class="text-lg font-semibold mb-1">Status</h2>
+                <p class="text-xs text-slate-400">Live system state and alerts.</p>
+            </div>
+
+            <div class="bg-slate-900 rounded-lg p-4 border border-slate-700">
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Eyes</span>
+                    <span id="statusEyes" class="text-green-400 font-semibold">AWAKE</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Head</span>
+                    <span id="statusHead" class="text-green-400 font-semibold">FOCUSED</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Phone</span>
+                    <span id="statusPhone" class="text-green-400 font-semibold">CLEAR</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Off Road</span>
+                    <span id="statusTOR" class="text-green-400 font-semibold">0.0s</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Presence</span>
+                    <span id="statusPresence" class="text-green-400 font-semibold">PRESENT</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-400">
+                    <span>Camera</span>
+                    <span id="statusObstruction" class="text-green-400 font-semibold">CLEAR</span>
+                </div>
+                <div class="hidden">
+                    <span id="statusBlink"></span>
+                    <span id="statusYawn"></span>
+                </div>
+            </div>
+
+            <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col">
+                <h2 class="text-sm font-semibold mb-2 border-b border-slate-600 pb-2">Alert Log</h2>
+                <div id="logBox" class="flex-1 bg-slate-900 rounded p-3 font-mono text-xs text-slate-400 overflow-y-auto h-40 space-y-1">
+                    <div>System initialized. Waiting to start...</div>
+                </div>
+            </div>
+        </aside>
+        </aside>
+        
+        <!-- Video Feed -->
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-black flex items-center justify-center" id="videoContainer">
+            <p id="loadingText" class="absolute z-20 text-slate-400 text-center hidden">
+                Loading HD AI Models...<br><span class="text-sm">(This may take a few seconds)</span>
+            </p>
+            
+            <!-- Hidden video element used as source -->
+            <video id="inputVideo" class="hidden" autoplay="" playsinline=""></video>
+            <!-- Canvas where we draw the video and AI overlays -->
+            <canvas id="outputCanvas" class="absolute inset-0 w-full h-full z-10"></canvas>
+            <!-- Canvas for object detection overlays (avoids clearing races) -->
+            <canvas id="detectionCanvas" class="absolute inset-0 w-full h-full z-20 pointer-events-none"></canvas>
+            
+            <!-- Visual Warning Overlay -->
+            <div id="warningOverlay" class="absolute inset-0 z-20 border-8 border-transparent pointer-events-none transition-all duration-300"></div>
+        </div>
+
+        <!-- Fullscreen video with overlay panels -->
+    </main>
+
+    <script type="module">
+        import { FilesetResolver, ObjectDetector } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.mjs";
+        // DOM Elements
+        const startBtn = document.getElementById('startBtn');
+        const videoElement = document.getElementById('inputVideo');
+        const canvasElement = document.getElementById('outputCanvas');
+        const canvasCtx = canvasElement.getContext('2d');
+        const detectionCanvas = document.getElementById('detectionCanvas');
+        const detectionCtx = detectionCanvas.getContext('2d');
+        const loadingText = document.getElementById('loadingText');
+        const warningOverlay = document.getElementById('warningOverlay');
+        const videoContainer = document.getElementById('videoContainer');
+        const logBox = document.getElementById('logBox');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const milesValue = document.getElementById('milesValue');
+        const infractionsValue = document.getElementById('infractionsValue');
+        const infractionsRate = document.getElementById('infractionsRate');
+        const earSlider = document.getElementById('earSlider');
+        const earValue = document.getElementById('earValue');
+        const drowsySlider = document.getElementById('drowsySlider');
+        const drowsyValue = document.getElementById('drowsyValue');
+        const distractedSlider = document.getElementById('distractedSlider');
+        const distractedValue = document.getElementById('distractedValue');
+        const offroadSlider = document.getElementById('offroadSlider');
+        const offroadValue = document.getElementById('offroadValue');
+        const phoneSlider = document.getElementById('phoneSlider');
+        const phoneValue = document.getElementById('phoneValue');
+
+        // Status Badges
+        const statusEyes = document.getElementById('statusEyes');
+        const statusHead = document.getElementById('statusHead');
+        const statusPhone = document.getElementById('statusPhone');
+        const statusTOR = document.getElementById('statusTOR');
+        const statusBlink = document.getElementById('statusBlink');
+        const statusYawn = document.getElementById('statusYawn');
+        const statusPresence = document.getElementById('statusPresence');
+        const statusObstruction = document.getElementById('statusObstruction');
+
+        // State Variables
+        let isSystemRunning = false;
+        let objectDetector = null;
+        let lastVideoTime = -1;
+        
+        // Tracking Counters
+        let drowsyFrames = 0; 
+        let distractedFrames = 0; 
+        let phoneFrames = 0; // New: Temporal smoothing for phone detection
+        let absenceFrames = 0;
+        let obstructionFrames = 0;
+
+        // AI Thresholds
+        let EAR_THRESHOLD = 0.22; 
+        let DROWSY_FRAME_LIMIT = 10; 
+        let DISTRACTED_FRAME_LIMIT = 15; 
+        let OFFROAD_ALERT_MS = 2000;
+        let OFFROAD_CLEAR_MS = 400;
+        
+        // New: Object Detection Thresholds
+        let PHONE_CONFIDENCE_THRESHOLD = 0.55; // Must be 55% sure it's a phone
+        const PHONE_FRAME_LIMIT = 2; // Must see phone for 2 consecutive checks to trigger
+
+        // Drowsiness & behavior thresholds
+        const PERCLOS_WINDOW_MS = 60000;
+        const BLINK_MIN_MS = 100;
+        const BLINK_MAX_MS = 1000;
+        const YAWN_MAR_THRESHOLD = 0.7;
+        const YAWN_MIN_MS = 700;
+
+        // Telemetry buffers
+        const allFrameTs = [];
+        const closedFrameTs = [];
+        const blinkTs = [];
+        const yawnTs = [];
+        const nodTs = [];
+
+        let offRoadStartTs = null;
+        let eyeClosed = false;
+        let eyeClosedStartTs = 0;
+        let yawnOpen = false;
+        let yawnStartTs = 0;
+        let lastLightCheckTs = 0;
+        let lastNoseY = null;
+        let nodDownTs = 0;
+        const lightSampleCanvas = document.createElement('canvas');
+        lightSampleCanvas.width = 32;
+        lightSampleCanvas.height = 18;
+        const lightSampleCtx = lightSampleCanvas.getContext('2d');
+        let lastMilesTs = performance.now();
+        let totalMiles = 0;
+        let totalInfractions = 0;
+        const infractionCounts = {
+            drowsy: 0,
+            distraction: 0,
+            phone: 0,
+            presence: 0,
+            obstruction: 0,
+            yawn: 0,
+            nod: 0
+        };
+
+        // --- Math Helpers ---
+        function calculateEAR(landmarks, indices) {
+            const pLeft = landmarks[indices[0]];
+            const pTop1 = landmarks[indices[1]];
+            const pTop2 = landmarks[indices[2]];
+            const pRight = landmarks[indices[3]];
+            const pBottom2 = landmarks[indices[4]];
+            const pBottom1 = landmarks[indices[5]];
+            
+            const v1 = Math.hypot(pTop1.x - pBottom1.x, pTop1.y - pBottom1.y);
+            const v2 = Math.hypot(pTop2.x - pBottom2.x, pTop2.y - pBottom2.y);
+            const h = Math.hypot(pLeft.x - pRight.x, pLeft.y - pRight.y);
+            
+            return (v1 + v2) / (2.0 * h);
+        }
+
+        function calculateHeadYaw(landmarks) {
+            const nose = landmarks[1];
+            const leftCheek = landmarks[234];
+            const rightCheek = landmarks[454];
+            
+            const distLeft = Math.hypot(nose.x - leftCheek.x, nose.y - leftCheek.y);
+            const distRight = Math.hypot(nose.x - rightCheek.x, nose.y - rightCheek.y);
+            
+            return distLeft / distRight; 
+        }
+
+        function calculateMAR(landmarks) {
+            const upper = landmarks[13];
+            const lower = landmarks[14];
+            const left = landmarks[78];
+            const right = landmarks[308];
+            const v = Math.hypot(upper.x - lower.x, upper.y - lower.y);
+            const h = Math.hypot(left.x - right.x, left.y - right.y);
+            return v / h;
+        }
+
+        function updateBadge(el, text, state) {
+            el.textContent = text;
+            if (state === 'danger') {
+                el.className = "px-3 py-1 rounded-full text-sm font-bold bg-red-900 text-red-400";
+            } else if (state === 'warn') {
+                el.className = "px-3 py-1 rounded-full text-sm font-bold bg-yellow-900 text-yellow-300";
+            } else if (state === 'ok') {
+                el.className = "px-3 py-1 rounded-full text-sm font-bold bg-green-900 text-green-400";
+            } else {
+                el.className = "px-3 py-1 rounded-full text-sm font-bold bg-slate-700 text-slate-300";
+            }
+        }
+
+        function logAlert(msg, type = 'info') {
+            const div = document.createElement('div');
+            const time = new Date().toLocaleTimeString();
+            div.textContent = `[${time}] ${msg}`;
+            div.className = type === 'danger' ? 'text-red-400 font-bold' : 'text-slate-400';
+            logBox.prepend(div);
+            if(logBox.children.length > 20) logBox.removeChild(logBox.lastChild);
+        }
+
+        function registerInfraction(kind) {
+            if (!infractionCounts[kind] && infractionCounts[kind] !== 0) return;
+            infractionCounts[kind] += 1;
+            totalInfractions += 1;
+            infractionsValue.textContent = totalInfractions.toString();
+        }
+
+        function updateMiles() {
+            const now = performance.now();
+            const dtMs = now - lastMilesTs;
+            lastMilesTs = now;
+            const mph = Number(speedSlider.value);
+            const milesPerMs = mph / 3600000;
+            totalMiles += milesPerMs * dtMs;
+            milesValue.textContent = `${totalMiles.toFixed(2)} mi`;
+            const per100 = totalMiles >= 0.1 ? (totalInfractions / (totalMiles / 100)) : 0;
+            infractionsRate.textContent = per100.toFixed(1);
+        }
+
+        // --- AI Initialization ---
+        async function initializeSystem() {
+            startBtn.disabled = true;
+            startBtn.textContent = "Loading...";
+            loadingText.classList.remove('hidden');
+
+            try {
+                // Require secure context for camera access
+                if (!window.isSecureContext) {
+                    throw new Error("Camera requires https or http://localhost. Current page is not secure.");
+                }
+
+                // Force permission prompt and bind stream early
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: Math.min(1920, window.innerWidth), max: 1920 },
+                        height: { ideal: Math.min(1080, window.innerHeight), max: 1080 }
+                    },
+                    audio: false
+                });
+                videoElement.srcObject = stream;
+                videoElement.addEventListener('loadedmetadata', applyVideoLayout, { once: true });
+
+                // 1. Load Object Detection (MediaPipe Tasks)
+                logAlert("Loading Object Detector...");
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+                );
+                objectDetector = await ObjectDetector.createFromModelPath(
+                    vision,
+                    "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite"
+                );
+                await objectDetector.setOptions({
+                    runningMode: "video",
+                    scoreThreshold: PHONE_CONFIDENCE_THRESHOLD,
+                    categoryAllowlist: ["cell phone"]
+                });
+                logAlert("Object Detector Loaded.");
+
+                // 2. Load Face Mesh (MediaPipe)
+                logAlert("Loading Face Mesh model...");
+                const FaceMesh = window.FaceMesh || window['@mediapipe/face_mesh'].FaceMesh;
+                const faceMesh = new FaceMesh({locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                }});
+                
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true, 
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                faceMesh.onResults(onFaceMeshResults);
+
+                // 3. Start Camera (Increased to 720p for better object detection)
+                logAlert("Requesting HD camera access...");
+                const Camera = window.Camera || window['@mediapipe/camera_utils'].Camera;
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        await faceMesh.send({image: videoElement});
+                    },
+                    width: 1280, // Increased resolution
+                    height: 720  // Increased resolution
+                });
+                
+                await camera.start();
+                applyVideoLayout();
+                
+                // 4. Start Object Detection Loop
+                setInterval(runObjectDetection, 350);
+
+                loadingText.classList.add('hidden');
+                startBtn.textContent = "System Active";
+                startBtn.classList.replace('bg-blue-600', 'bg-green-600');
+                logAlert("System fully operational.", "info");
+                isSystemRunning = true;
+
+            } catch (error) {
+                console.error(error);
+                const name = error?.name ? `${error.name}: ` : "";
+                const msg = error?.message || "Unknown error";
+                logAlert(`Failed to start: ${name}${msg}`, "danger");
+                loadingText.innerHTML = `Error accessing camera.<br>${name}${msg}`;
+                startBtn.textContent = "Error";
+            }
+        }
+
+        // --- Improved Object Detection Logic ---
+        async function runObjectDetection() {
+            if (!isSystemRunning || !objectDetector) return;
+            if (videoElement.currentTime === lastVideoTime) return;
+            lastVideoTime = videoElement.currentTime;
+
+            const now = performance.now();
+            const results = objectDetector.detectForVideo(videoElement, now);
+            const detections = results?.detections || [];
+            const phoneDetected = detections.find(d => {
+                const cat = (d.categories && d.categories[0]) ? d.categories[0] : null;
+                const label = cat ? (cat.categoryName || cat.displayName || "") : "";
+                const score = cat ? (cat.score ?? 0) : 0;
+                return label === "cell phone" && score >= PHONE_CONFIDENCE_THRESHOLD;
+            });
+
+            // Ensure overlay canvas matches video size
+            if (detectionCanvas.width !== videoElement.videoWidth || detectionCanvas.height !== videoElement.videoHeight) {
+                detectionCanvas.width = videoElement.videoWidth;
+                detectionCanvas.height = videoElement.videoHeight;
+            }
+            detectionCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            
+            if (phoneDetected) {
+                phoneFrames++; // Increment smoothing counter
+                
+                // Only trigger if we've seen it consistently
+                if (phoneFrames >= PHONE_FRAME_LIMIT) {
+                    statusPhone.textContent = "PHONE DETECTED";
+                    statusPhone.className = "px-3 py-1 rounded-full text-sm font-bold bg-red-900 text-red-400";
+                    triggerMasterAlarm();
+                    
+                    if (phoneFrames === PHONE_FRAME_LIMIT) {
+                        const cat = phoneDetected.categories[0];
+                        logAlert(`Cell phone detected! (${Math.round((cat?.score ?? 0) * 100)}% confidence)`, "danger");
+                        registerInfraction("phone");
+                    }
+                    
+                    // Draw bounding box and label
+                    detectionCtx.strokeStyle = "#ef4444"; // Red
+                    detectionCtx.lineWidth = 4;
+                    const box = phoneDetected.boundingBox;
+                    detectionCtx.strokeRect(box.originX, box.originY, box.width, box.height);
+                    
+                    // Draw confidence text
+                    detectionCtx.fillStyle = "#ef4444";
+                    detectionCtx.fillRect(box.originX, box.originY - 25, 140, 25);
+                    detectionCtx.fillStyle = "white";
+                    detectionCtx.font = "16px Arial";
+                    detectionCtx.fillText(`Phone ${Math.round((cat?.score ?? 0) * 100)}%`, box.originX + 5, box.originY - 7);
+                }
+            } else {
+                // Decrease counter gradually (prevents flickering if AI misses a single frame)
+                if (phoneFrames > 0) phoneFrames--;
+                
+                if (phoneFrames === 0) {
+                    statusPhone.textContent = "CLEAR";
+                    statusPhone.className = "px-3 py-1 rounded-full text-sm font-bold bg-green-900 text-green-400";
+                }
+            }
+        }
+
+        // --- Face & Eye Tracking Logic ---
+        function onFaceMeshResults(results) {
+            // Setup Canvas
+            if (canvasElement.width !== videoElement.videoWidth || canvasElement.height !== videoElement.videoHeight) {
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+            }
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            // Draw Video Background
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+            let isAlarmActive = false;
+            const now = performance.now();
+
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                const landmarks = results.multiFaceLandmarks[0];
+                absenceFrames = 0;
+                updateBadge(statusPresence, "PRESENT", "ok");
+
+                // Ensure drawing utils are available
+                const drawConnectors = window.drawConnectors || window['@mediapipe/drawing_utils'].drawConnectors;
+                const FACEMESH_RIGHT_EYE = window.FACEMESH_RIGHT_EYE || (window['@mediapipe/face_mesh'] ? window['@mediapipe/face_mesh'].FACEMESH_RIGHT_EYE : null);
+                const FACEMESH_LEFT_EYE = window.FACEMESH_LEFT_EYE || (window['@mediapipe/face_mesh'] ? window['@mediapipe/face_mesh'].FACEMESH_LEFT_EYE : null);
+                const FACEMESH_TESSELATION = window.FACEMESH_TESSELATION || (window['@mediapipe/face_mesh'] ? window['@mediapipe/face_mesh'].FACEMESH_TESSELATION : null);
+
+                // Draw Eye Landmarks (wider, higher contrast)
+                if (drawConnectors && FACEMESH_RIGHT_EYE) {
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {color: '#22d3ee80', lineWidth: 5});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {color: '#22d3ee', lineWidth: 3});
+                }
+                if (drawConnectors && FACEMESH_LEFT_EYE) {
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, {color: '#fb923c80', lineWidth: 5});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, {color: '#fb923c', lineWidth: 3});
+                }
+                if (drawConnectors && FACEMESH_TESSELATION) drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION, {color: '#C0C0C020', lineWidth: 0.8});
+
+                // 1. Calculate Drowsiness (EAR)
+                const leftEyeIndices = [33, 160, 158, 133, 153, 144];
+                const rightEyeIndices = [362, 385, 387, 263, 373, 380];
+                
+                const leftEAR = calculateEAR(landmarks, leftEyeIndices);
+                const rightEAR = calculateEAR(landmarks, rightEyeIndices);
+                const avgEAR = (leftEAR + rightEAR) / 2;
+
+                // Telemetry windows
+                allFrameTs.push(now);
+                if (avgEAR < EAR_THRESHOLD) closedFrameTs.push(now);
+                while (allFrameTs.length && now - allFrameTs[0] > PERCLOS_WINDOW_MS) allFrameTs.shift();
+                while (closedFrameTs.length && now - closedFrameTs[0] > PERCLOS_WINDOW_MS) closedFrameTs.shift();
+
+                if (avgEAR < EAR_THRESHOLD) {
+                    drowsyFrames++;
+                    if (!eyeClosed) {
+                        eyeClosed = true;
+                        eyeClosedStartTs = now;
+                    }
+                    if (drowsyFrames >= DROWSY_FRAME_LIMIT) {
+                        statusEyes.textContent = "DROWSY / SLEEPING";
+                        statusEyes.className = "px-3 py-1 rounded-full text-sm font-bold bg-red-900 text-red-400";
+                        isAlarmActive = true;
+                        if(drowsyFrames === DROWSY_FRAME_LIMIT) {
+                            logAlert("Micro-sleep detected!", "danger");
+                            registerInfraction("drowsy");
+                        }
+                    }
+                } else {
+                    drowsyFrames = 0;
+                    statusEyes.textContent = "AWAKE";
+                    statusEyes.className = "px-3 py-1 rounded-full text-sm font-bold bg-green-900 text-green-400";
+                    if (eyeClosed) {
+                        const closedMs = now - eyeClosedStartTs;
+                        if (closedMs >= BLINK_MIN_MS && closedMs <= BLINK_MAX_MS) {
+                            blinkTs.push(now);
+                        }
+                        eyeClosed = false;
+                    }
+                }
+
+                // 2. Calculate Distraction (Head Pose Yaw)
+                const yawRatio = calculateHeadYaw(landmarks);
+                
+                if (yawRatio > 2.2 || yawRatio < 0.45) {
+                    distractedFrames++;
+                    if (distractedFrames >= DISTRACTED_FRAME_LIMIT) {
+                        statusHead.textContent = "LOOKING AWAY";
+                        statusHead.className = "px-3 py-1 rounded-full text-sm font-bold bg-red-900 text-red-400";
+                        isAlarmActive = true;
+                        if(distractedFrames === DISTRACTED_FRAME_LIMIT) {
+                            logAlert("Driver distracted (eyes off road)!", "danger");
+                            registerInfraction("distraction");
+                        }
+                    }
+                } else {
+                    distractedFrames = 0;
+                    statusHead.textContent = "FOCUSED";
+                    statusHead.className = "px-3 py-1 rounded-full text-sm font-bold bg-green-900 text-green-400";
+                }
+
+                // 3. Time Off Road (coarse: head pose + eyes open)
+                const isLookingAway = (yawRatio > 2.2 || yawRatio < 0.45);
+                const isEyesClosed = (avgEAR < EAR_THRESHOLD);
+                if (isLookingAway || isEyesClosed) {
+                    if (!offRoadStartTs) offRoadStartTs = now;
+                } else {
+                    if (offRoadStartTs && now - offRoadStartTs > OFFROAD_CLEAR_MS) offRoadStartTs = null;
+                }
+
+                const offRoadMs = offRoadStartTs ? (now - offRoadStartTs) : 0;
+                const offRoadSec = (offRoadMs / 1000).toFixed(1);
+                if (offRoadMs >= OFFROAD_ALERT_MS) {
+                    updateBadge(statusTOR, `${offRoadSec}s`, "danger");
+                    isAlarmActive = true;
+                    if (Math.abs(offRoadMs - OFFROAD_ALERT_MS) < 120) {
+                        logAlert(`Time off road exceeded ${(OFFROAD_ALERT_MS / 1000).toFixed(1)}s`, "danger");
+                        registerInfraction("distraction");
+                    }
+                } else if (offRoadMs > 0) {
+                    updateBadge(statusTOR, `${offRoadSec}s`, "warn");
+                } else {
+                    updateBadge(statusTOR, "0.0s", "ok");
+                }
+
+                // 4. PERCLOS (computed from closed frames)
+                const perclos = allFrameTs.length ? (closedFrameTs.length / allFrameTs.length) : 0;
+                if (perclos > 0.35) {
+                    updateBadge(statusEyes, "DROWSY / PERCLOS", "danger");
+                    isAlarmActive = true;
+                    if (perclos > 0.35 && drowsyFrames === 0) {
+                        logAlert(`High PERCLOS (${Math.round(perclos * 100)}%)`, "danger");
+                        registerInfraction("drowsy");
+                    }
+                }
+
+                // 5. Blink rate (1 min window)
+                while (blinkTs.length && now - blinkTs[0] > PERCLOS_WINDOW_MS) blinkTs.shift();
+                const blinkRate = blinkTs.length;
+                updateBadge(statusBlink, `${blinkRate}/min`, blinkRate < 5 ? "warn" : "ok");
+
+                // 6. Yawn detection (MAR)
+                const mar = calculateMAR(landmarks);
+                if (mar > YAWN_MAR_THRESHOLD) {
+                    if (!yawnOpen) {
+                        yawnOpen = true;
+                        yawnStartTs = now;
+                    }
+                } else if (yawnOpen) {
+                    const yawnMs = now - yawnStartTs;
+                    if (yawnMs >= YAWN_MIN_MS) {
+                        yawnTs.push(now);
+                        logAlert("Yawn detected", "danger");
+                        isAlarmActive = true;
+                        registerInfraction("yawn");
+                    }
+                    yawnOpen = false;
+                }
+                while (yawnTs.length && now - yawnTs[0] > PERCLOS_WINDOW_MS) yawnTs.shift();
+                updateBadge(statusYawn, `${yawnTs.length}`, yawnTs.length > 2 ? "warn" : "ok");
+
+                // 7. Head nod detection (simple motion)
+                const nose = landmarks[1];
+                if (lastNoseY !== null) {
+                    const deltaY = nose.y - lastNoseY;
+                    if (!nodDownTs && deltaY > 0.03) {
+                        nodDownTs = now;
+                    } else if (nodDownTs && deltaY < -0.02) {
+                        if (now - nodDownTs < 1200) {
+                            nodTs.push(now);
+                            logAlert("Head nod detected", "danger");
+                            isAlarmActive = true;
+                            registerInfraction("nod");
+                        }
+                        nodDownTs = 0;
+                    }
+                }
+                lastNoseY = nose.y;
+
+                // 8. Low light / obstruction check (sample every 500ms)
+                if (now - lastLightCheckTs > 500) {
+                    lastLightCheckTs = now;
+                    lightSampleCtx.drawImage(results.image, 0, 0, 32, 18);
+                    const data = lightSampleCtx.getImageData(0, 0, 32, 18).data;
+                    let sum = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        sum += (data[i] * 0.2126 + data[i + 1] * 0.7152 + data[i + 2] * 0.0722);
+                    }
+                    const avg = sum / (data.length / 4);
+                    if (avg < 25) obstructionFrames++;
+                    else if (obstructionFrames > 0) obstructionFrames--;
+                    if (obstructionFrames >= 3) {
+                        updateBadge(statusObstruction, "OBSTRUCTED", "danger");
+                        isAlarmActive = true;
+                        registerInfraction("obstruction");
+                    } else {
+                        updateBadge(statusObstruction, "CLEAR", "ok");
+                    }
+                }
+            }
+            else {
+                // No face detected
+                absenceFrames++;
+                if (absenceFrames > 15) {
+                    updateBadge(statusPresence, "NO FACE", "danger");
+                    isAlarmActive = true;
+                    if (absenceFrames === 16) {
+                        logAlert("Driver absent / face not detected", "danger");
+                        registerInfraction("presence");
+                    }
+                } else {
+                    updateBadge(statusPresence, "SEARCHING", "warn");
+                }
+            }
+
+            // UI Alarm Overlay
+            if (isAlarmActive || phoneFrames >= PHONE_FRAME_LIMIT) {
+                triggerMasterAlarm();
+            } else {
+                warningOverlay.classList.remove('alert-flash');
+            }
+
+            canvasCtx.restore();
+        }
+
+        function triggerMasterAlarm() {
+            warningOverlay.classList.add('alert-flash');
+        }
+
+        function applyVideoLayout() {
+            const videoW = videoElement.videoWidth || 1280;
+            const videoH = videoElement.videoHeight || 720;
+            const maxW = Math.min(1920, window.innerWidth);
+            const maxH = Math.min(1080, window.innerHeight);
+            const scale = Math.min(maxW / videoW, maxH / videoH, 1);
+            const targetW = Math.max(320, Math.floor(videoW * scale));
+            const targetH = Math.max(180, Math.floor(videoH * scale));
+            videoContainer.style.width = `${targetW}px`;
+            videoContainer.style.height = `${targetH}px`;
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', () => {
+            if (!isSystemRunning) initializeSystem();
+        });
+
+        speedSlider.addEventListener('input', () => {
+            speedValue.textContent = `${speedSlider.value} mph`;
+        });
+
+        earSlider.addEventListener('input', () => {
+            EAR_THRESHOLD = Number(earSlider.value);
+            earValue.textContent = EAR_THRESHOLD.toFixed(2);
+        });
+
+        drowsySlider.addEventListener('input', () => {
+            DROWSY_FRAME_LIMIT = Number(drowsySlider.value);
+            drowsyValue.textContent = DROWSY_FRAME_LIMIT.toString();
+        });
+
+        distractedSlider.addEventListener('input', () => {
+            DISTRACTED_FRAME_LIMIT = Number(distractedSlider.value);
+            distractedValue.textContent = DISTRACTED_FRAME_LIMIT.toString();
+        });
+
+        offroadSlider.addEventListener('input', () => {
+            OFFROAD_ALERT_MS = Number(offroadSlider.value);
+            offroadValue.textContent = OFFROAD_ALERT_MS.toString();
+        });
+
+        phoneSlider.addEventListener('input', async () => {
+            PHONE_CONFIDENCE_THRESHOLD = Number(phoneSlider.value);
+            phoneValue.textContent = PHONE_CONFIDENCE_THRESHOLD.toFixed(2);
+            if (objectDetector) {
+                await objectDetector.setOptions({ scoreThreshold: PHONE_CONFIDENCE_THRESHOLD });
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (isSystemRunning) applyVideoLayout();
+        });
+
+        // Initialize simulated driving metrics
+        speedValue.textContent = `${speedSlider.value} mph`;
+        earValue.textContent = EAR_THRESHOLD.toFixed(2);
+        drowsyValue.textContent = DROWSY_FRAME_LIMIT.toString();
+        distractedValue.textContent = DISTRACTED_FRAME_LIMIT.toString();
+        offroadValue.textContent = OFFROAD_ALERT_MS.toString();
+        phoneValue.textContent = PHONE_CONFIDENCE_THRESHOLD.toFixed(2);
+        setInterval(updateMiles, 250);
+    </script>
+
+
+</body></html>
+
