@@ -176,6 +176,89 @@
             
             <!-- Visual Warning Overlay -->
             <div id="warningOverlay" class="absolute inset-0 z-20 border-8 border-transparent pointer-events-none transition-all duration-300"></div>
+
+            <!-- Drowsiness Method Overlay -->
+            <div id="drowsinessOverlay" class="absolute left-3 bottom-3 z-30 w-[440px] max-w-[92vw] max-h-[70vh] overflow-y-auto bg-slate-900/90 backdrop-blur border border-slate-700 rounded-lg p-4 text-xs text-slate-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-cyan-300">Drowsiness Method</h3>
+                        <p class="text-[11px] text-slate-400">Grouped data points for the sleeping method overlay.</p>
+                    </div>
+                    <span class="text-[10px] px-2 py-1 rounded-full bg-slate-800 text-slate-300">High-Fidelity</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-md p-3">
+                        <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Core Pipeline</div>
+                        <div class="space-y-1 text-[11px] text-slate-200">
+                            <div>Face detection + ROI extraction</div>
+                            <div>Facial landmarks (eyes, mouth, nose, jaw)</div>
+                            <div>Feature tracking over time</div>
+                            <div>Temporal decision layer (LSTM/3D CNN)</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-md p-3">
+                        <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Best Algorithms</div>
+                        <div class="space-y-1 text-[11px] text-slate-200">
+                            <div>CNNs for spatial cues</div>
+                            <div>LSTM/3D CNN for sequences</div>
+                            <div>YOLO for fast landmarks</div>
+                            <div>Hybrid ML thresholds</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/60 border border-slate-800 rounded-md p-3">
+                    <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Key Metrics</div>
+                    <div class="grid grid-cols-2 gap-3 text-[11px]">
+                        <div class="space-y-1">
+                            <div class="text-slate-300 font-semibold">Eye</div>
+                            <div>EAR, prolonged closure</div>
+                            <div>Blink rate + duration</div>
+                            <div>PERCLOS window</div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="text-slate-300 font-semibold">Mouth</div>
+                            <div>MAR + yawning freq</div>
+                            <div class="text-slate-300 font-semibold mt-2">Head & Gaze</div>
+                            <div>Pitch/roll/yaw</div>
+                            <div>Gaze off-road time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-md p-3">
+                        <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Scorecard Weights</div>
+                        <div class="space-y-1 text-[11px] text-slate-200">
+                            <div>Eye closure (40)</div>
+                            <div>Blink pattern (20)</div>
+                            <div>Yawning index (15)</div>
+                            <div>Head pose / nods (15)</div>
+                            <div>Gaze off-road (10)</div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950/60 border border-slate-800 rounded-md p-3">
+                        <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Alert Thresholds</div>
+                        <div class="space-y-1 text-[11px] text-slate-200">
+                            <div>EAR &lt; 0.20–0.25</div>
+                            <div>PERCLOS 60–120s</div>
+                            <div>Yawns ≥ 3 / 5 min</div>
+                            <div>Gaze away &gt; 2–3s</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950/60 border border-slate-800 rounded-md p-3">
+                    <div class="text-[11px] uppercase tracking-wide text-slate-400 mb-2">Operational Notes</div>
+                    <div class="space-y-1 text-[11px] text-slate-200">
+                        <div>IR/NIR illumination for night</div>
+                        <div>Pretrained + fine-tuned models</div>
+                        <div>Fuse vision + vehicle signals</div>
+                        <div>Sliding window forecasting</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Fullscreen video with overlay panels -->
@@ -652,6 +735,24 @@
 
                 // 6. Yawn detection (MAR)
                 const mar = calculateMAR(landmarks);
+                if (mar > YAWN_MAR_THRESHOLD) {
+                    const mouthLeft = landmarks[78];
+                    const mouthRight = landmarks[308];
+                    const mouthTop = landmarks[13];
+                    const mouthBottom = landmarks[14];
+                    const mx = mouthLeft.x * canvasElement.width;
+                    const my = mouthTop.y * canvasElement.height;
+                    const mw = (mouthRight.x - mouthLeft.x) * canvasElement.width;
+                    const mh = (mouthBottom.y - mouthTop.y) * canvasElement.height;
+                    canvasCtx.save();
+                    canvasCtx.fillStyle = "rgba(248, 113, 113, 0.25)";
+                    canvasCtx.fillRect(mx, my, mw, mh);
+                    canvasCtx.strokeStyle = "#f87171";
+                    canvasCtx.lineWidth = 2;
+                    canvasCtx.setLineDash([6, 6]);
+                    canvasCtx.strokeRect(mx, my, mw, mh);
+                    canvasCtx.restore();
+                }
                 if (mar > YAWN_MAR_THRESHOLD) {
                     if (!yawnOpen) {
                         yawnOpen = true;
