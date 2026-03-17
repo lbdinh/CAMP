@@ -1,130 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Telematics Simulator</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
-    <link rel="stylesheet" href="../shared/generated/datahub.css">
-    <link rel="stylesheet" href="../shared/camp-theme.css">
-    <script src="../shared/vendor/react.production.min.js"></script>
-    <script src="../shared/vendor/react-dom.production.min.js"></script>
-    <script src="../shared/vendor/lucide.min.js"></script>
-
-    <style>
-        @keyframes dropDown {
-            0% { top: var(--start-y); opacity: 0; transform: scale(0.5); }
-            5% { opacity: 1; transform: scale(1); }
-            95% { opacity: 1; transform: scale(1); }
-            100% { top: var(--end-y); opacity: 1; transform: scale(1); }
-        }
-        @keyframes pipelineMove {
-            0% { top: var(--start-y); opacity: 0; transform: scale(0.5); }
-            3% { opacity: 1; transform: scale(1); }
-            97% { opacity: 1; transform: scale(1); }
-            100% { top: var(--end-y); opacity: 0; transform: scale(0.5); }
-        }
-        @keyframes iconTransform {
-            0% { opacity: 0; transform: scale(0.9); }
-            50% { opacity: 0.4; transform: scale(1.25); }
-            100% { opacity: 0; transform: scale(1.5); }
-        }
-        @keyframes iconFadeOut {
-            0% { opacity: 1; transform: scale(1); }
-            100% { opacity: 0; transform: scale(0.5); }
-        }
-        @keyframes iconFadeIn {
-            0% { opacity: 0; transform: scale(0.5); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-        @keyframes iconSwapToX {
-            0% { content: 'file-json'; }
-            100% { content: 'x-circle'; color: var(--camp-accent-danger); }
-        }
-        @keyframes bgRed {
-            0% { background-color: rgba(15, 32, 47, 0.88); border-color: rgba(104, 178, 70, 0.55); }
-            100% { background-color: rgba(127, 29, 29, 0.6); border-color: rgba(226, 47, 26, 0.5); }
-        }
-        @keyframes bubbleInto {
-          0% { top: var(--start-y); opacity: 0; transform: scale(0.5); }
-          5% { opacity: 1; transform: scale(1); }
-          50% { top: var(--end-y); opacity: 1; transform: scale(1); }
-          65% { top: var(--end-y); opacity: 1; transform: scale(1.8); }
-          80% { top: var(--end-y); opacity: 0.8; transform: scale(1.4); }
-          90% { top: var(--end-y); opacity: 0.5; transform: scale(1.9); }
-          100% { top: var(--end-y); opacity: 0; transform: scale(2.0); }
-        }
-        @keyframes flushOut {
-          0% { top: var(--start-y); opacity: 0; transform: scale(0.3) translateX(var(--offset-x, 0px)); }
-          8% { opacity: 1; transform: scale(0.55) translateX(var(--offset-x, 0px)); }
-          80% { opacity: 0.9; transform: scale(0.55) translateX(0px); }
-          100% { top: var(--end-y); opacity: 0; transform: scale(0.3) translateX(0px); }
-        }
-        @keyframes ballooning {
-            0%, 100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 8px currentColor); }
-            50% { transform: translateY(-10px) scale(1.15); filter: drop-shadow(0 0 20px currentColor); }
-        }
-        @keyframes signalPulse {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.3; }
-            70% { opacity: 0.15; }
-            100% { transform: translate(-50%, -50%) scale(1.7); opacity: 0; }
-        }
-        .packet-anim {
-            animation: dropDown var(--duration, 0.8s) cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        .packet-combined {
-            animation: pipelineMove var(--duration, 1.6s) linear forwards;
-        }
-        .packet-queue {
-            animation: bubbleInto var(--duration, 1.2s) cubic-bezier(0.4, 0, 0.2, 1) forwards;
-        }
-        .representative-queue {
-            animation: ballooning 2s ease-in-out infinite;
-            filter: drop-shadow(0 0 12px rgba(22, 148, 202, 0.5));
-        }
-        .packet-flush {
-            animation: flushOut var(--duration, 0.4s) cubic-bezier(0.1, 0, 0.2, 1) forwards;
-        }
-        .signal-ring {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            border: 1.5px solid rgba(22, 148, 202, 0.2);
-            border-radius: 9999px;
-            animation: signalPulse 2s ease-out infinite;
-            pointer-events: none;
-        }
-        .signal-ring.delay {
-            animation-delay: 1s;
-            border-color: rgba(22, 148, 202, 0.15);
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px; height: 12px; border-radius: 50%;
-            background: var(--camp-accent-brand); cursor: pointer;
-        }
-        .lucide {
-            width: 1em;
-            height: 1em;
-        }
-        body.camp-theme {
-            background: transparent;
-        }
-        .calamp-grid {
-            background-image:
-                linear-gradient(rgba(22, 148, 202, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(22, 148, 202, 0.05) 1px, transparent 1px);
-            background-size: 36px 36px;
-        }
-    </style>
-</head>
-<body class="camp-theme bg-brand-deep">
-    <div id="preview-app" class="camp-elevated h-screen p-4 flex items-center justify-center">
-        <div id="loading" class="text-slate-400 text-sm font-mono animate-pulse">Initializing Simulator...</div>
-    </div>
-
-    <script>
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
         const h = React.createElement;
 
@@ -577,9 +450,9 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
             const isLayer3Offline = !serverOnline && (mode === 'webhook' || mode === 'polling');
 
-return h('div', { className: "absolute inset-0 bg-brand-navy text-slate-100 font-sans overflow-hidden flex flex-col border border-brand-steel/20 rounded-[1.5rem] shadow-[0_30px_90px_rgba(5,22,37,0.55)]" },
+            return h('div', { className: "absolute inset-0 bg-brand-navy text-slate-100 font-sans overflow-hidden flex flex-col border border-brand-medium/20 rounded-[1.5rem] shadow-[0_30px_90px_rgba(5,22,37,0.55)]" },
                 /* Header */
-h('div', { className: "flex-none min-h-24 border-b border-brand-steel/20 bg-gradient-to-r from-brand-deep/90 via-brand-navy/85 to-brand-navy/80 flex items-center justify-between px-8 z-30 backdrop-blur-md" },
+                h('div', { className: "flex-none min-h-24 border-b border-brand-medium/20 bg-gradient-to-r from-brand-dark/90 via-brand-navy/85 to-brand-panel/80 flex items-center justify-between px-8 z-30 backdrop-blur-md" },
                     h('div', { className: "flex items-center h-full gap-5" },
                         h('a', {
                             href: "../index.html",
@@ -599,23 +472,23 @@ h('div', { className: "flex-none min-h-24 border-b border-brand-steel/20 bg-grad
                                     onClick: () => setMode(m),
                                     className: `px-6 py-2.5 rounded-t-xl text-sm font-black transition-all relative -mb-[1px] border-x border-t ${
                                         mode === m 
-? 'bg-brand-navy text-brand-blue border-brand-steel/30 shadow-[0_-8px_24px_rgba(22,148,202,0.12)] z-10'
+                                        ? 'bg-brand-navy text-brand-bright border-brand-medium/30 shadow-[0_-8px_24px_rgba(0,175,215,0.12)] z-10' 
                                         : 'bg-black/10 text-slate-400 border-transparent hover:text-white hover:bg-black/20'
                                     }`
                                 }, 
                                     MODE_LABELS[m],
-mode === m && h('div', { className: "absolute bottom-0 left-0 right-0 h-0.5 bg-brand-blue shadow-[0_-2px_10px_rgba(22,148,202,0.55)]" })
+                                    mode === m && h('div', { className: "absolute bottom-0 left-0 right-0 h-0.5 bg-brand-bright shadow-[0_-2px_10px_rgba(0,175,215,0.55)]" })
                                 )
                             )
                         )
                     ),
                     h('div', { className: "flex items-center gap-8" },
-h('div', { className: "flex items-center gap-3 text-brand-orange bg-brand-orange/10 px-4 py-2 rounded-full border border-brand-orange/30 shadow-[0_0_18px_rgba(255,150,90,0.12)]" },
+                        h('div', { className: "flex items-center gap-3 text-brand-orange bg-brand-orange/10 px-4 py-2 rounded-full border border-brand-orange/30 shadow-[0_0_18px_rgba(255,150,90,0.12)]" },
                             h('span', { className: "text-sm font-mono font-bold" }, throughput, " msgs/sec")
                         ),
                         h('div', { className: "text-xs font-mono text-right flex flex-col gap-1.5" },
                             (mode === 'pubsub' || mode === 'kinesis') && h(StatusBadgeItem, { label: "QUEUE", value: queue, colorClass: "text-yellow-300" }),
-mode === 'polling' && h(StatusBadgeItem, { label: "CLOUD BUFFER", value: apiBuffer, colorClass: "text-brand-steel" }),
+                            mode === 'polling' && h(StatusBadgeItem, { label: "CLOUD BUFFER", value: apiBuffer, colorClass: "text-purple-300" }),
                             h(StatusBadgeItem, { label: "LOST", value: lost, colorClass: "text-red-400", extraClass: "underline" })
                         )
                     )
@@ -624,11 +497,11 @@ mode === 'polling' && h(StatusBadgeItem, { label: "CLOUD BUFFER", value: apiBuff
                 /* Main Area */
                 h('div', { className: "flex-1 relative flex justify-center items-center z-10 min-h-0" },
                     /* LEFT CONTROL PANEL */
-h('div', { className: `absolute left-3 top-3 bottom-3 ${isCollapsed ? 'w-12' : 'w-52'} transition-all duration-300 ease-in-out bg-brand-navy/95 backdrop-blur-md border border-brand-steel/20 rounded-xl flex flex-col z-40 overflow-hidden shadow-2xl` },
+                    h('div', { className: `absolute left-3 top-3 bottom-3 ${isCollapsed ? 'w-12' : 'w-52'} transition-all duration-300 ease-in-out bg-brand-panel/95 backdrop-blur-md border border-brand-medium/20 rounded-xl flex flex-col z-40 overflow-hidden shadow-2xl` },
                         /* Header with Collapse Button */
-h('div', { className: "flex items-center justify-between p-4 border-b border-brand-steel/20" },
+                        h('div', { className: "flex items-center justify-between p-4 border-b border-brand-medium/20" },
                             !isCollapsed && h('div', { className: "flex items-center gap-2" },
-h(Icon, { name: 'sliders-horizontal', size: 14, className: "text-brand-blue" }),
+                                h(Icon, { name: 'sliders-horizontal', size: 14, className: "text-brand-bright" }),
                                 h('span', { className: "text-sm font-bold text-slate-100 uppercase tracking-wider" }, "Controls")
                             ),
                             h('button', {
@@ -689,10 +562,10 @@ h(Icon, { name: 'sliders-horizontal', size: 14, className: "text-brand-blue" }),
                                     min: 5, max: 1000, step: 5,
                                     onChange: setPollInterval,
                                     unit: "s",
-                                colorClass: "text-brand-steel",
+                                    colorClass: "text-purple-300",
                                     disabled: !serverOnline
                                 }),
-h('div', { className: "mt-auto pt-4 border-t border-brand-steel/20" },
+                                h('div', { className: "mt-auto pt-4 border-t border-brand-medium/20" },
                                     h('div', { className: "text-xs text-slate-100 mb-3 font-black tracking-wider" }, "DATA FORMAT"),
                                     h('div', { className: "flex flex-col gap-3" },
                                         [
@@ -744,7 +617,7 @@ h('div', { className: "mt-auto pt-4 border-t border-brand-steel/20" },
                                                 h(Icon, { 
                                                     name: 'radio-tower', 
                                                     size: tower.size, 
-                                className: `text-brand-blue transition-all duration-500 ${isPlaying ? 'drop-shadow-[0_0_15px_rgba(22,148,202,0.9)]' : ''}` 
+                                                    className: `text-cyan-400 transition-all duration-500 ${isPlaying ? 'drop-shadow-[0_0_15px_rgba(34,211,238,0.9)]' : ''}` 
                                                 })
                                             )
                                         ))
@@ -755,24 +628,24 @@ h('div', { className: "mt-auto pt-4 border-t border-brand-steel/20" },
                             /* 2. CTC DATAHUB */
                             h(StageNode, {
                                 top: '38%', icon: 'cloud-cog', title: "CTC DataHub", subtitle: "Decode and Enrich Data",
-                                iconColorClass: "text-brand-blue",
-                                containerClass: "bg-slate-800/80 border-brand-steel/25 backdrop-blur-md"
+                                iconColorClass: "text-brand-bright",
+                                containerClass: "bg-slate-800/80 border-brand-medium/25 backdrop-blur-md"
                             }, 
-                                mode === 'polling' && apiBuffer > 0 && h(QueueBadge, { count: apiBuffer, colorClass: "bg-brand-steel", label: "queued" })
+                                mode === 'polling' && apiBuffer > 0 && h(QueueBadge, { count: apiBuffer, colorClass: "bg-purple-600", label: "queued" })
                             ),
 
                             /* Customer Infra / Cloud Outline */
                             (mode === 'webhook' || mode === 'polling' || mode === 'kinesis' || mode === 'pubsub') && h('div', { 
                                 className: `absolute -inset-x-10 top-[49%] bottom-[1.5%] z-0 pointer-events-none`
                             },
-                                h('div', { className: `absolute inset-0 border-2 rounded-[3rem] ${mode === 'kinesis' ? 'border-brand-orange/20 bg-brand-orange/5' : mode === 'pubsub' ? 'border-brand-blue/20 bg-brand-blue/5' : 'border-brand-steel/20 bg-brand-steel/5'}` }),
+                                h('div', { className: `absolute inset-0 border-2 rounded-[3rem] ${mode === 'kinesis' ? 'border-brand-orange/20 bg-brand-orange/5' : mode === 'pubsub' ? 'border-brand-bright/20 bg-brand-bright/5' : 'border-brand-medium/20 bg-brand-medium/5'}` }),
                                 h('svg', { className: "absolute inset-0 w-full h-full" },
                                     h('rect', { 
                                         x: "2", y: "2", width: "calc(100% - 4px)", height: "calc(100% - 4px)", 
-                                        rx: "48", ry: "48", fill: "none", stroke: mode === 'kinesis' ? "#FF965A" : mode === 'pubsub' ? "#1694CA" : "#41748D", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
+                                        rx: "48", ry: "48", fill: "none", stroke: mode === 'kinesis' ? "#FF965A" : mode === 'pubsub' ? "#00AFD7" : "#41748D", strokeWidth: "3", strokeDasharray: "12 12", className: "opacity-80"
                                     })
                                 ),
-                                h('span', { className: `absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border text-[12px] font-black tracking-widest uppercase z-10 whitespace-nowrap ${mode === 'kinesis' ? 'border-brand-orange/50 text-brand-orange shadow-[0_0_20px_rgba(255,150,90,0.35)]' : mode === 'pubsub' ? 'border-brand-blue/50 text-brand-blue shadow-[0_0_20px_rgba(22,148,202,0.35)]' : 'border-brand-steel/50 text-slate-300 shadow-[0_0_20px_rgba(65,116,141,0.3)]'}` }, 
+                                h('span', { className: `absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-navy px-4 py-1.5 rounded-full border text-[12px] font-black tracking-widest uppercase z-10 whitespace-nowrap ${mode === 'kinesis' ? 'border-brand-orange/50 text-brand-orange shadow-[0_0_20px_rgba(255,150,90,0.35)]' : mode === 'pubsub' ? 'border-brand-bright/50 text-brand-bright shadow-[0_0_20px_rgba(0,175,215,0.35)]' : 'border-brand-medium/50 text-slate-300 shadow-[0_0_20px_rgba(65,116,141,0.3)]'}` }, 
                                     mode === 'kinesis' ? "CUSTOMER AWS INFRASTRUCTURE" : mode === 'pubsub' ? "CUSTOMER GOOGLE CLOUD INFRASTRUCTURE" : "CUSTOMER INFRASTRUCTURE"
                                 )
                             ),
@@ -786,17 +659,17 @@ h('div', { className: "mt-auto pt-4 border-t border-brand-steel/20" },
                                           mode === 'kinesis' ? (!serverOnline ? 'Buffering in Stream (Server Down)' : 'Managed Stream Delivery') : 
                                           (isLayer3Offline ? 'Offline (Server Down)' : mode === 'pubsub' ? 'Guaranteed Delivery' : 'Receives HTTP POST'),
                                 containerClass: isLayer3Offline ? 'bg-slate-900 border-slate-700 opacity-60' :
-                                               mode === 'pubsub' ? (queue > 0 ? 'bg-sky-900/35 border-brand-blue shadow-[0_0_20px_rgba(22,148,202,0.18)]' : 'bg-slate-800/90 border-brand-steel/25') :
+                                               mode === 'pubsub' ? (queue > 0 ? 'bg-sky-900/35 border-brand-bright shadow-[0_0_20px_rgba(0,175,215,0.18)]' : 'bg-slate-800/90 border-brand-medium/25') :
                                                mode === 'webhook' ? 'bg-orange-950/30 border-orange-500/50' :
                                                mode === 'kinesis' ? (queue > 0 ? 'bg-orange-950/20 border-brand-orange shadow-[0_0_20px_rgba(255,150,90,0.18)]' : 'bg-orange-950/10 border-brand-orange/50') :
-                                               'bg-brand-steel/15 border-brand-steel/50',
+                                               'bg-purple-900/30 border-purple-500/50',
                                 iconColorClass: isLayer3Offline ? 'text-slate-500' : 
-                                               mode === 'pubsub' ? 'text-brand-blue' : 
+                                               mode === 'pubsub' ? 'text-brand-bright' : 
                                                mode === 'webhook' ? 'text-orange-300' : 
-                                               mode === 'kinesis' ? 'text-brand-orange' : 'text-brand-steel'
+                                               mode === 'kinesis' ? 'text-brand-orange' : 'text-purple-300'
                             },
                                 mode === 'polling' && !isLayer3Offline && h('div', { className: "ml-auto" },
-                                    h(PieTimer, { progress: pollProgress, size: 36, color: "#1694CA" })
+                                    h(PieTimer, { progress: pollProgress, size: 36, color: "#a855f7" })
                                 ),
                                 (mode === 'pubsub' || mode === 'kinesis') && queue > 0 && h(QueueBadge, { count: queue, colorClass: mode === 'kinesis' ? 'bg-teal-600' : 'bg-blue-600' })
                             ),
@@ -815,19 +688,19 @@ h('div', { className: "mt-auto pt-4 border-t border-brand-steel/20" },
 
                         /* RIGHT COLUMN: Animation Track */
                         h('div', { className: "relative w-28 h-full ml-32 z-10 flex flex-col items-center" },
-                            h('div', { className: "mt-[10%] mb-2 bg-brand-navy px-3 py-1 rounded-md border border-brand-steel/30 text-[11px] text-brand-blue font-black tracking-widest uppercase whitespace-nowrap z-20 shadow-lg calamp-grid" }, "Data Flow"),
+                            h('div', { className: "mt-[10%] mb-2 bg-brand-navy px-3 py-1 rounded-md border border-brand-medium/30 text-[11px] text-brand-bright font-black tracking-widest uppercase whitespace-nowrap z-20 shadow-lg calamp-grid" }, "Data Flow"),
                             h('div', { 
-                                className: "relative w-full flex-1 bg-slate-900/40 border border-brand-steel/15 rounded-[3rem] flex justify-center shadow-inner overflow-hidden calamp-grid",
+                                className: "relative w-full flex-1 bg-slate-900/40 border border-brand-medium/15 rounded-[3rem] flex justify-center shadow-inner overflow-hidden calamp-grid",
                                 style: { marginBottom: '10%' }
                             },
-                                h('svg', { className: "w-full h-full text-brand-blue/60 drop-shadow-[0_0_10px_rgba(22,148,202,0.4)]", viewBox: "0 0 100 1000", preserveAspectRatio: "none", fill: "currentColor" },
+                                h('svg', { className: "w-full h-full text-brand-bright/60 drop-shadow-[0_0_10px_rgba(0,175,215,0.4)]", viewBox: "0 0 100 1000", preserveAspectRatio: "none", fill: "currentColor" },
                                     h('path', { d: "M42 0 H58 V970 L72 970 L50 1000 L28 970 L42 970 Z" })
                                 )
                             ),
 
                             /* Representative Queue Icon - Persistent when queued/buffering */
                             (mode === 'pubsub' || mode === 'kinesis') && queue > 0 && h('div', { 
-                                className: `absolute left-1/2 z-40 -ml-8 -mt-8 w-16 h-16 rounded-2xl flex items-center justify-center border-2 backdrop-blur-lg representative-queue ${mode === 'kinesis' ? 'bg-orange-950/20 border-brand-orange/50 text-brand-orange' : 'bg-sky-900/30 border-brand-blue/50 text-brand-blue'}`,
+                                className: `absolute left-1/2 z-40 -ml-8 -mt-8 w-16 h-16 rounded-2xl flex items-center justify-center border-2 backdrop-blur-lg representative-queue ${mode === 'kinesis' ? 'bg-orange-950/20 border-brand-orange/50 text-brand-orange' : 'bg-sky-900/30 border-brand-bright/50 text-brand-bright'}`,
                                 style: { top: '61%' } 
                             }, h(Icon, { name: mode === 'kinesis' ? 'waves' : 'database', size: 40 })),
 
@@ -842,9 +715,9 @@ h('div', { className: "mt-auto pt-4 border-t border-brand-steel/20" },
                 ),
 
                 /* Footer */
-h('div', { className: "flex-none h-12 bg-black/30 border-t border-brand-steel/20 flex items-center justify-between px-8 overflow-hidden z-30 backdrop-blur-sm" },
+                h('div', { className: "flex-none h-12 bg-black/30 border-t border-brand-medium/20 flex items-center justify-between px-8 overflow-hidden z-30 backdrop-blur-sm" },
                     h('div', { className: "flex items-center" },
-h(Icon, { name: 'activity', size: 18, className: "text-brand-blue mr-4 animate-pulse flex-shrink-0" }),
+                        h(Icon, { name: 'activity', size: 18, className: "text-brand-bright mr-4 animate-pulse flex-shrink-0" }),
                         h('span', { className: "text-sm font-mono text-white font-bold truncate" }, lastLog)
                     ),
                     h('span', { className: "text-[10px] text-slate-500 font-bold tracking-widest uppercase" }, "© 2026 CalAmp")
@@ -854,7 +727,3 @@ h(Icon, { name: 'activity', size: 18, className: "text-brand-blue mr-4 animate-p
 
         const root = ReactDOM.createRoot(document.getElementById('preview-app'));
         root.render(React.createElement(TelematicsDashboard));
-    </script>
-    <script src="../shared/camp-theme.js"></script>
-</body>
-</html>

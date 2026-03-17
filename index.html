@@ -1,538 +1,134 @@
-<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CalAmp | Telematics Cloud Interactive Tools</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                fontFamily: {
-                    sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-                },
-                extend: {
-                    colors: {
-                        midnight: {
-                            DEFAULT: '#0F202F',
-                            deep: '#051625',
-                        },
-                        'dark-blue': '#253746',
-                        'medium-blue': '#41748D',
-                        'inquisite': {
-                            DEFAULT: '#1694CA',
-                            active: '#0280B6',
-                        },
-                        'bright-blue': '#00AFD7',
-                        calamp: {
-                            orange: '#FF965A',
-                            'orange-light': '#FED0B6',
-                            silver: '#DDE5ED',
-                        },
-                    },
-                    animation: {
-                        'fade-up-1': 'fadeUp 0.6s ease both 0.1s',
-                        'fade-up-2': 'fadeUp 0.6s ease both 0.2s',
-                        'fade-up-3': 'fadeUp 0.6s ease both 0.3s',
-                        'fade-up-4': 'fadeUp 0.6s ease both 0.4s',
-                        'fade-up-5': 'fadeUp 0.6s ease both 0.5s',
-                        'fade-up-6': 'fadeUp 0.6s ease both 0.6s',
-                    },
-                    keyframes: {
-                        fadeUp: {
-                            '0%': { opacity: '0', transform: 'translateY(20px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        },
-                    },
-                },
-            },
-        }
-    </script>
-    <style>
-        .bg-grid {
-            background-image:
-                linear-gradient(rgba(22, 148, 202, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(22, 148, 202, 0.04) 1px, transparent 1px);
-            background-size: 60px 60px;
-        }
-        .card-bar::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 3px;
-            background: transparent;
-            transition: background 0.35s ease;
-            border-radius: 16px 16px 0 0;
-        }
-        .card-blue:hover::before {
-            background: linear-gradient(90deg, #1694CA, #00AFD7);
-        }
-        .card-orange:hover::before {
-            background: linear-gradient(90deg, #FF965A, #FED0B6);
-        }
-        @keyframes hex-rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #dataCanvas {
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1;
-            pointer-events: none;
-        }
-        .hex-overlay {
-            position: fixed;
-            top: -50%; left: -50%;
-            width: 200%; height: 200%;
-            z-index: 1;
-            pointer-events: none;
-            opacity: 0.015;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66ZM28 100L0 84L0 50L28 34L56 50L56 84L28 100Z' fill='none' stroke='%2300AFD7' stroke-width='1'/%3E%3C/svg%3E");
-            animation: hex-rotate 120s linear infinite;
-        }
-    </style>
+    <link rel="stylesheet" href="./shared/generated/home.css">
+    <link rel="stylesheet" href="./shared/camp-theme.css">
 </head>
-<body class="bg-midnight-deep font-sans text-white min-h-screen overflow-x-hidden">
-
-    <!-- Background layers -->
-    <div class="bg-grid fixed inset-0 z-0"></div>
-    <div class="hex-overlay"></div>
-    <canvas id="dataCanvas"></canvas>
-
-    <!-- Gradient orbs with parallax -->
-    <div class="fixed -top-64 -right-36 w-[600px] h-[600px] rounded-full bg-inquisite opacity-[0.14] blur-[140px] pointer-events-none z-0 transition-transform duration-700 ease-out" id="orb1"></div>
-    <div class="fixed -bottom-64 -left-36 w-[600px] h-[600px] rounded-full bg-bright-blue opacity-[0.10] blur-[140px] pointer-events-none z-0 transition-transform duration-700 ease-out" id="orb2"></div>
-    <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-midnight opacity-50 blur-[100px] pointer-events-none z-0"></div>
-    <div class="fixed top-1/4 right-1/4 w-[300px] h-[300px] rounded-full bg-calamp-orange opacity-[0.04] blur-[100px] pointer-events-none z-0 transition-transform duration-700 ease-out" id="orb3"></div>
-
-    <div class="relative z-10 max-w-[1100px] mx-auto px-5 sm:px-8 min-h-screen flex flex-col">
+<body class="camp-theme bg-brand-deep font-sans text-white min-h-screen overflow-x-hidden">
+    <div class="camp-elevated max-w-[1100px] mx-auto px-5 sm:px-8 min-h-screen flex flex-col">
 
         <!-- Nav -->
-        <nav class="flex flex-col sm:flex-row items-start sm:items-center justify-between py-6 border-b border-medium-blue/15 mb-8 animate-fade-up-1">
+        <nav class="flex flex-col sm:flex-row items-start sm:items-center justify-between py-6 border-b border-brand-steel/15 mb-8 animate-fade-up-1">
             <div class="flex items-center gap-3 mb-3 sm:mb-0">
                 <img src="./CA_Logo_Color-white.png" alt="CalAmp" class="h-12 sm:h-16 w-auto transition-transform hover:scale-105 duration-300">
-            </div>
-            <div class="text-[0.7rem] font-semibold uppercase tracking-widest text-bright-blue bg-bright-blue/[0.08] border border-bright-blue/15 px-3.5 py-1.5 rounded-full">
-                Interactive Tools
             </div>
         </nav>
 
         <!-- Hero -->
         <div class="flex-1 flex flex-col justify-center py-8">
 
-            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-bright-blue mb-5 animate-fade-up-1">
-                <span class="inline-block w-6 h-0.5 bg-gradient-to-r from-inquisite to-bright-blue"></span>
-                CalAmp Telematics Cloud — Data Platform
+            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-brand-blue mb-5 animate-fade-up-1">
+                <span class="inline-block w-6 h-0.5 bg-gradient-to-r from-brand-blue to-brand-blue/60"></span>
+                CalAmp Telematics Cloud - Data Platform
             </div>
 
             <h1 class="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.1] tracking-tight mb-5 max-w-[700px] animate-fade-up-2">
                 Explore the
-                <span class="bg-gradient-to-r from-inquisite to-bright-blue bg-clip-text text-transparent">Telematics DataHub</span>
+                <span class="bg-gradient-to-r from-brand-blue to-brand-blue/60 bg-clip-text text-transparent">Telematics DataHub</span>
             </h1>
 
-            <p class="text-lg text-medium-blue leading-relaxed max-w-[560px] mb-14 animate-fade-up-3">
-                Use these interactive guides to help evaluate CalAmp's telematics data platform — estimate ROI for your deployment and see how our data streaming and ingestion capabilities work.
+            <p class="text-lg text-brand-steel leading-relaxed max-w-[560px] mb-14 animate-fade-up-3">
+                Use these interactive guides to help evaluate CalAmp's telematics data platform - estimate ROI for your deployment and see how our data streaming and ingestion capabilities work.
             </p>
 
-            <!-- Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="mb-14">
+                <div class="camp-section-kicker text-brand-blue animate-fade-up-3">Telematics DataHub</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <!-- CTC ROI Calculator -->
-                <a href="./ctc-roi-calculator/" class="card-bar card-blue group relative bg-gradient-to-br from-dark-blue/50 to-midnight/80 border border-medium-blue/15 rounded-2xl p-8 no-underline text-inherit
+                    <!-- CTC ROI Calculator -->
+                    <a href="./ctc-roi-calculator/index.html" class="camp-card-bar camp-card-bar-blue group relative bg-gradient-to-br from-brand-navy/50 to-brand-deep/80 border border-brand-steel/15 rounded-2xl p-8 no-underline text-inherit
                           transition-all duration-300 ease-out
-                          hover:-translate-y-1.5 hover:border-inquisite/30 hover:shadow-[0_20px_60px_rgba(5,22,37,0.5),0_0_40px_rgba(22,148,202,0.08)]
+                          hover:-translate-y-1.5 hover:border-brand-blue/30 hover:shadow-[0_20px_60px_rgba(5,22,37,0.5),0_0_40px_rgba(22,148,202,0.08)]
                           backdrop-blur-sm overflow-hidden animate-fade-up-4">
-                    <div class="w-[52px] h-[52px] rounded-[14px] bg-inquisite/10 border border-inquisite/20 flex items-center justify-center mb-6">
-                        <svg width="24" height="24" fill="none" stroke="#1694CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <rect x="4" y="2" width="16" height="20" rx="2"></rect>
-                            <line x1="8" y1="6" x2="16" y2="6"></line>
-                            <line x1="8" y1="10" x2="10" y2="10"></line>
-                            <line x1="12" y1="10" x2="14" y2="10"></line>
-                            <line x1="8" y1="14" x2="10" y2="14"></line>
-                            <line x1="12" y1="14" x2="14" y2="14"></line>
-                            <line x1="8" y1="18" x2="14" y2="18"></line>
-                        </svg>
-                    </div>
-                    <h2 class="text-xl font-bold mb-2.5 text-white">CTC ROI Calculator</h2>
-                    <p class="text-medium-blue text-sm leading-relaxed mb-6">Estimate the return on investment for CTC deployments with configurable parameters, real-time cost projections, and detailed breakdowns.</p>
-                    <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-bright-blue transition-all duration-300 group-hover:gap-3.5">
-                        Launch Calculator
-                        <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </div>
-                </a>
+                        <div class="w-[52px] h-[52px] rounded-[14px] bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center mb-6">
+                            <svg class="text-brand-blue" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                                <line x1="8" y1="6" x2="16" y2="6"></line>
+                                <line x1="8" y1="10" x2="10" y2="10"></line>
+                                <line x1="12" y1="10" x2="14" y2="10"></line>
+                                <line x1="8" y1="14" x2="10" y2="14"></line>
+                                <line x1="12" y1="14" x2="14" y2="14"></line>
+                                <line x1="8" y1="18" x2="14" y2="18"></line>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2.5 text-white">CTC ROI Calculator</h2>
+                        <p class="text-brand-steel text-sm leading-relaxed mb-6">Estimate the return on investment for CTC deployments with configurable parameters, real-time cost projections, and detailed breakdowns.</p>
+                        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-blue transition-all duration-300 group-hover:gap-3.5">
+                            Launch Calculator
+                            <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </a>
 
-                <!-- DataHub Simulator -->
-                <a href="./datahub-simulator/" class="card-bar card-orange group relative bg-gradient-to-br from-dark-blue/50 to-midnight/80 border border-medium-blue/15 rounded-2xl p-8 no-underline text-inherit
+                    <!-- DataHub Simulator -->
+                    <a href="./datahub-simulator/index.html" class="camp-card-bar camp-card-bar-orange group relative bg-gradient-to-br from-brand-navy/50 to-brand-deep/80 border border-brand-steel/15 rounded-2xl p-8 no-underline text-inherit
                           transition-all duration-300 ease-out
-                          hover:-translate-y-1.5 hover:border-calamp-orange/30 hover:shadow-[0_20px_60px_rgba(5,22,37,0.5),0_0_40px_rgba(255,150,90,0.08)]
+                          hover:-translate-y-1.5 hover:border-brand-orange/30 hover:shadow-[0_20px_60px_rgba(5,22,37,0.5),0_0_40px_rgba(255,150,90,0.08)]
                           backdrop-blur-sm overflow-hidden animate-fade-up-5">
-                    <div class="w-[52px] h-[52px] rounded-[14px] bg-calamp-orange/10 border border-calamp-orange/20 flex items-center justify-center mb-6">
-                        <svg width="24" height="24" fill="none" stroke="#FF965A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                        </svg>
-                    </div>
-                    <h2 class="text-xl font-bold mb-2.5 text-white">Telematics DataHub Simulator</h2>
-                    <p class="text-medium-blue text-sm leading-relaxed mb-6">Explore different data streaming methods with a live simulator showcasing our ingestion pipelines, delivery mechanisms, and integration options.</p>
-                    <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-calamp-orange transition-all duration-300 group-hover:gap-3.5">
-                        Launch Simulator
-                        <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
-                        </svg>
-                    </div>
-                </a>
+                        <div class="w-[52px] h-[52px] rounded-[14px] bg-brand-orange/10 border border-brand-orange/20 flex items-center justify-center mb-6">
+                            <svg class="text-brand-orange" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2.5 text-white">Telematics DataHub Simulator</h2>
+                        <p class="text-brand-steel text-sm leading-relaxed mb-6">Explore different data streaming methods with a live simulator showcasing our ingestion pipelines, delivery mechanisms, and integration options.</p>
+                        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-orange transition-all duration-300 group-hover:gap-3.5">
+                            Launch Simulator
+                            <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+            </section>
 
-            </div>
+            <section>
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-brand-orange mb-5 animate-fade-up-4">
+                    <span class="inline-block w-6 h-0.5 bg-gradient-to-r from-brand-orange to-brand-orange/60"></span>
+                    CalAmp Vision - AI Video Safety
+                </div>
 
+                <h2 class="text-4xl sm:text-5xl lg:text-[3.5rem] font-extrabold leading-[1.1] tracking-tight mb-5 max-w-[760px] animate-fade-up-5">
+                    Explore
+                    <span class="bg-gradient-to-r from-brand-orange to-brand-orange/60 bg-clip-text text-transparent">CalAmp Vision</span>
+                </h2>
+
+                <p class="text-lg text-brand-steel leading-relaxed max-w-[760px] mb-14 animate-fade-up-6">
+                    Explore CalAmp Vision, a dual road-facing and driver-facing AI-powered safety dashcam that automatically records risky driving incidents, uploads footage to the cloud, and supports driver scorecarding workflows.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <a href="./drowsy-driving-sim/index.html" class="camp-card-bar camp-card-bar-blue group relative bg-gradient-to-br from-brand-navy/50 to-brand-deep/80 border border-brand-steel/15 rounded-2xl p-8 no-underline text-inherit
+                              transition-all duration-300 ease-out
+                              hover:-translate-y-1.5 hover:border-brand-blue/30 hover:shadow-[0_20px_60px_rgba(5,22,37,0.5),0_0_40px_rgba(22,148,202,0.08)]
+                              backdrop-blur-sm overflow-hidden animate-fade-up-6">
+                        <div class="w-[52px] h-[52px] rounded-[14px] bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center mb-6">
+                            <svg class="text-brand-blue" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                                <path d="M12 3v6"></path>
+                                <path d="M8 21h8"></path>
+                                <path d="M19 10a7 7 0 1 1-14 0"></path>
+                                <path d="M9 10a3 3 0 1 0 6 0"></path>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-bold mb-2.5 text-white">Drowsy Driving Sim</h2>
+                        <p class="text-brand-steel text-sm leading-relaxed mb-6">Explore the driver-facing AI view with automated risk detection for drowsiness and unsafe in-cab behavior that can feed event capture and scorecards.</p>
+                        <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-brand-blue transition-all duration-300 group-hover:gap-3.5">
+                            Launch Drowsy Driving Sim
+                            <svg class="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+            </section>
         </div>
     </div>
 
-    <footer class="relative z-10 text-center py-12 text-medium-blue/40 text-[0.7rem] font-medium tracking-widest uppercase animate-fade-up-6">
+    <footer class="camp-elevated text-center py-12 text-brand-steel/40 text-[0.7rem] font-medium tracking-widest uppercase animate-fade-up-6">
         &copy; 2026 CalAmp
     </footer>
 
-    <!-- Telematics Data Canvas -->
-    <script>
-    (function () {
-        const canvas = document.getElementById('dataCanvas');
-        const ctx = canvas.getContext('2d');
-        let w, h, hubs, vehicles, uplinks, mouse;
-
-        mouse = { x: -1000, y: -1000 };
-
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }
-
-        // --- Fixed infrastructure hubs (cell towers / data centers) ---
-        function createHubs() {
-            hubs = [];
-            const count = Math.max(4, Math.floor((w * h) / 200000));
-            for (let i = 0; i < count; i++) {
-                hubs.push({
-                    x: w * 0.1 + Math.random() * w * 0.8,
-                    y: h * 0.1 + Math.random() * h * 0.8,
-                    r: 2.5 + Math.random() * 1.5,
-                    pulse: Math.random() * Math.PI * 2,
-                });
-            }
-        }
-
-        // --- Vehicles that follow smooth routes ---
-        function createRoute() {
-            // Generate a smooth multi-segment path using waypoints
-            const numWaypoints = 4 + Math.floor(Math.random() * 4);
-            const waypoints = [];
-            // Start from an edge
-            const edge = Math.floor(Math.random() * 4);
-            let sx, sy;
-            if (edge === 0) { sx = -30; sy = Math.random() * h; }
-            else if (edge === 1) { sx = w + 30; sy = Math.random() * h; }
-            else if (edge === 2) { sx = Math.random() * w; sy = -30; }
-            else { sx = Math.random() * w; sy = h + 30; }
-            waypoints.push({ x: sx, y: sy });
-
-            // Waypoints that meander across the screen (like road turns)
-            for (let i = 1; i < numWaypoints - 1; i++) {
-                const t = i / (numWaypoints - 1);
-                waypoints.push({
-                    x: w * 0.05 + Math.random() * w * 0.9,
-                    y: h * 0.05 + Math.random() * h * 0.9,
-                });
-            }
-            // End at another edge
-            const edge2 = (edge + 1 + Math.floor(Math.random() * 3)) % 4;
-            let ex, ey;
-            if (edge2 === 0) { ex = -30; ey = Math.random() * h; }
-            else if (edge2 === 1) { ex = w + 30; ey = Math.random() * h; }
-            else if (edge2 === 2) { ex = Math.random() * w; ey = -30; }
-            else { ex = Math.random() * w; ey = h + 30; }
-            waypoints.push({ x: ex, y: ey });
-
-            return waypoints;
-        }
-
-        function catmullRom(p0, p1, p2, p3, t) {
-            const t2 = t * t, t3 = t2 * t;
-            return {
-                x: 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
-                y: 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
-            };
-        }
-
-        function getRoutePoint(waypoints, progress) {
-            const n = waypoints.length - 1;
-            const scaled = progress * n;
-            const i = Math.min(Math.floor(scaled), n - 1);
-            const t = scaled - i;
-            const p0 = waypoints[Math.max(i - 1, 0)];
-            const p1 = waypoints[i];
-            const p2 = waypoints[Math.min(i + 1, n)];
-            const p3 = waypoints[Math.min(i + 2, n)];
-            return catmullRom(p0, p1, p2, p3, t);
-        }
-
-        function createVehicle() {
-            const route = createRoute();
-            return {
-                route,
-                progress: 0,
-                speed: 0.0003 + Math.random() * 0.0005, // very slow
-                trail: [],
-                trailMax: 60 + Math.floor(Math.random() * 40),
-                color: Math.random() > 0.6 ? 'orange' : 'blue',
-            };
-        }
-
-        function createVehicles() {
-            vehicles = [];
-            const count = Math.max(6, Math.floor((w * h) / 120000));
-            for (let i = 0; i < count; i++) {
-                const v = createVehicle();
-                v.progress = Math.random(); // stagger start positions
-                vehicles.push(v);
-            }
-        }
-
-        // --- Data uplinks: periodic transmissions from vehicles to nearest hub ---
-        function createUplinks() {
-            uplinks = [];
-        }
-
-        function spawnUplink(vx, vy, color) {
-            // Find nearest hub
-            let nearest = null, minD = Infinity;
-            for (const hub of hubs) {
-                const d = Math.hypot(hub.x - vx, hub.y - vy);
-                if (d < minD) { minD = d; nearest = hub; }
-            }
-            if (!nearest || minD > 400) return;
-
-            uplinks.push({
-                fromX: vx, fromY: vy,
-                toX: nearest.x, toY: nearest.y,
-                progress: 0,
-                speed: 0.008 + Math.random() * 0.008,
-                color,
-                alpha: 0.5,
-            });
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, w, h);
-            const time = Date.now() * 0.001;
-
-            // --- Draw hubs ---
-            for (const hub of hubs) {
-                const pulse = Math.sin(time * 0.8 + hub.pulse) * 0.3 + 1;
-                const r = hub.r * pulse;
-
-                // Outer ring
-                const ringAlpha = 0.05 + Math.sin(time * 0.6 + hub.pulse) * 0.025;
-                ctx.beginPath();
-                ctx.arc(hub.x, hub.y, r * 7, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(0, 175, 215, ${ringAlpha})`;
-                ctx.lineWidth = 0.4;
-                ctx.stroke();
-
-                // Second ring
-                ctx.beginPath();
-                ctx.arc(hub.x, hub.y, r * 4, 0, Math.PI * 2);
-                ctx.strokeStyle = `rgba(0, 175, 215, ${ringAlpha * 1.5})`;
-                ctx.lineWidth = 0.3;
-                ctx.stroke();
-
-                // Glow
-                const grad = ctx.createRadialGradient(hub.x, hub.y, 0, hub.x, hub.y, r * 10);
-                grad.addColorStop(0, 'rgba(22, 148, 202, 0.12)');
-                grad.addColorStop(0.4, 'rgba(22, 148, 202, 0.03)');
-                grad.addColorStop(1, 'rgba(22, 148, 202, 0)');
-                ctx.beginPath();
-                ctx.arc(hub.x, hub.y, r * 10, 0, Math.PI * 2);
-                ctx.fillStyle = grad;
-                ctx.fill();
-
-                // Core
-                ctx.beginPath();
-                ctx.arc(hub.x, hub.y, r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(0, 175, 215, ${0.5 + Math.sin(time * 0.8 + hub.pulse) * 0.15})`;
-                ctx.fill();
-
-                // Tiny crosshair
-                const ch = r * 3;
-                ctx.strokeStyle = `rgba(0, 175, 215, 0.08)`;
-                ctx.lineWidth = 0.4;
-                ctx.beginPath();
-                ctx.moveTo(hub.x - ch, hub.y);
-                ctx.lineTo(hub.x + ch, hub.y);
-                ctx.moveTo(hub.x, hub.y - ch);
-                ctx.lineTo(hub.x, hub.y + ch);
-                ctx.stroke();
-            }
-
-            // --- Draw vehicles along routes ---
-            for (const v of vehicles) {
-                const pos = getRoutePoint(v.route, v.progress);
-
-                // Store breadcrumb trail
-                v.trail.push({ x: pos.x, y: pos.y });
-                if (v.trail.length > v.trailMax) v.trail.shift();
-
-                // Draw trail (GPS breadcrumb style)
-                if (v.trail.length > 1) {
-                    ctx.beginPath();
-                    ctx.moveTo(v.trail[0].x, v.trail[0].y);
-                    for (let i = 1; i < v.trail.length; i++) {
-                        ctx.lineTo(v.trail[i].x, v.trail[i].y);
-                    }
-                    const trailColor = v.color === 'orange'
-                        ? 'rgba(255, 150, 90, 0.08)'
-                        : 'rgba(22, 148, 202, 0.08)';
-                    ctx.strokeStyle = trailColor;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    // Fading dots along trail
-                    for (let i = 0; i < v.trail.length; i += 6) {
-                        const dotAlpha = (i / v.trail.length) * 0.15;
-                        ctx.beginPath();
-                        ctx.arc(v.trail[i].x, v.trail[i].y, 0.8, 0, Math.PI * 2);
-                        ctx.fillStyle = v.color === 'orange'
-                            ? `rgba(255, 150, 90, ${dotAlpha})`
-                            : `rgba(22, 148, 202, ${dotAlpha})`;
-                        ctx.fill();
-                    }
-                }
-
-                // Vehicle head glow
-                const headGrad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 12);
-                if (v.color === 'orange') {
-                    headGrad.addColorStop(0, 'rgba(255, 150, 90, 0.35)');
-                    headGrad.addColorStop(0.5, 'rgba(255, 150, 90, 0.06)');
-                    headGrad.addColorStop(1, 'rgba(255, 150, 90, 0)');
-                } else {
-                    headGrad.addColorStop(0, 'rgba(0, 175, 215, 0.35)');
-                    headGrad.addColorStop(0.5, 'rgba(0, 175, 215, 0.06)');
-                    headGrad.addColorStop(1, 'rgba(0, 175, 215, 0)');
-                }
-                ctx.beginPath();
-                ctx.arc(pos.x, pos.y, 12, 0, Math.PI * 2);
-                ctx.fillStyle = headGrad;
-                ctx.fill();
-
-                // Vehicle dot
-                ctx.beginPath();
-                ctx.arc(pos.x, pos.y, 2.2, 0, Math.PI * 2);
-                ctx.fillStyle = v.color === 'orange'
-                    ? 'rgba(255, 180, 120, 0.8)'
-                    : 'rgba(100, 210, 240, 0.8)';
-                ctx.fill();
-
-                // Periodically send data uplink
-                if (Math.random() < 0.003) {
-                    spawnUplink(pos.x, pos.y, v.color);
-                }
-
-                // Advance along route
-                v.progress += v.speed;
-                if (v.progress >= 1) {
-                    // Reset with a new route
-                    const nv = createVehicle();
-                    v.route = nv.route;
-                    v.progress = 0;
-                    v.trail = [];
-                    v.speed = nv.speed;
-                    v.color = nv.color;
-                    v.trailMax = nv.trailMax;
-                }
-            }
-
-            // --- Draw data uplinks (vehicle → hub transmissions) ---
-            for (let i = uplinks.length - 1; i >= 0; i--) {
-                const u = uplinks[i];
-                const ux = u.fromX + (u.toX - u.fromX) * u.progress;
-                const uy = u.fromY + (u.toY - u.fromY) * u.progress;
-
-                // Dashed line from origin to current position
-                ctx.beginPath();
-                ctx.moveTo(u.fromX, u.fromY);
-                ctx.lineTo(ux, uy);
-                const lineAlpha = (1 - u.progress) * 0.15 * u.alpha;
-                ctx.strokeStyle = u.color === 'orange'
-                    ? `rgba(255, 150, 90, ${lineAlpha})`
-                    : `rgba(0, 175, 215, ${lineAlpha})`;
-                ctx.lineWidth = 0.6;
-                ctx.setLineDash([3, 4]);
-                ctx.stroke();
-                ctx.setLineDash([]);
-
-                // Packet dot
-                const pAlpha = u.alpha * (1 - u.progress * 0.5);
-                ctx.beginPath();
-                ctx.arc(ux, uy, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = u.color === 'orange'
-                    ? `rgba(255, 180, 120, ${pAlpha})`
-                    : `rgba(100, 220, 255, ${pAlpha})`;
-                ctx.fill();
-
-                u.progress += u.speed;
-                if (u.progress >= 1) {
-                    // Flash at hub on arrival
-                    const hub = hubs.find(h => h.x === u.toX && h.y === u.toY);
-                    if (hub) hub.pulse = time; // reset pulse on receive
-                    uplinks.splice(i, 1);
-                }
-            }
-
-            // --- Mouse proximity: subtle connection lines to nearby vehicles ---
-            for (const v of vehicles) {
-                if (v.trail.length < 2) continue;
-                const pos = v.trail[v.trail.length - 1];
-                const d = Math.hypot(pos.x - mouse.x, pos.y - mouse.y);
-                if (d < 200) {
-                    const alpha = (1 - d / 200) * 0.12;
-                    ctx.beginPath();
-                    ctx.moveTo(pos.x, pos.y);
-                    ctx.lineTo(mouse.x, mouse.y);
-                    ctx.strokeStyle = `rgba(0, 175, 215, ${alpha})`;
-                    ctx.lineWidth = 0.5;
-                    ctx.stroke();
-                }
-            }
-
-            requestAnimationFrame(draw);
-        }
-
-        // Parallax orbs
-        document.addEventListener('mousemove', (e) => {
-            mouse.x = e.clientX;
-            mouse.y = e.clientY;
-            const cx = e.clientX / w - 0.5;
-            const cy = e.clientY / h - 0.5;
-            const orb1 = document.getElementById('orb1');
-            const orb2 = document.getElementById('orb2');
-            const orb3 = document.getElementById('orb3');
-            if (orb1) orb1.style.transform = `translate(${cx * -40}px, ${cy * -30}px)`;
-            if (orb2) orb2.style.transform = `translate(${cx * 30}px, ${cy * 40}px)`;
-            if (orb3) orb3.style.transform = `translate(${cx * -20}px, ${cy * -20}px)`;
-        });
-
-        window.addEventListener('resize', () => {
-            resize();
-            createHubs();
-            createVehicles();
-        });
-
-        resize();
-        createHubs();
-        createVehicles();
-        createUplinks();
-        draw();
-    })();
-    </script>
-
-
-
+    <script src="./shared/camp-theme.js"></script>
 </body></html>

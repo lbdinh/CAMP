@@ -1,0 +1,19 @@
+{
+  "name": "gitcamp",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:vendor && npm run build:css:home && npm run build:css:datahub && npm run build:css:vision",
+    "build:css:datahub": "npx tailwindcss -c build/tailwind.datahub.config.cjs -i build/datahub.tailwind.css -o shared/generated/datahub.css --minify",
+    "build:css:home": "npx tailwindcss -c build/tailwind.home.config.cjs -i build/home.tailwind.css -o shared/generated/home.css --minify",
+    "build:css:vision": "npx tailwindcss -c build/tailwind.vision.config.cjs -i build/vision.tailwind.css -o shared/generated/vision.css --minify",
+    "build:vendor": "node scripts/build-vendor.mjs",
+    "serve": "node scripts/serve-local.mjs"
+  },
+  "devDependencies": {
+    "@mediapipe/face_mesh": "^0.4.1633559619",
+    "lucide": "^0.577.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.17"
+  }
+}

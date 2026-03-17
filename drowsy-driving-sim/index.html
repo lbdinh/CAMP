@@ -1,0 +1,1063 @@
+﻿﻿﻿﻿﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drowsy Driving Sim</title>
+  <link rel="stylesheet" href="../shared/camp-theme.css" />
+  <style>
+    :root {
+      --panel-w: 320px;
+      --panel-bg: rgba(15, 32, 47, 0.82);
+      --accent: var(--camp-accent-success);
+      --warn: var(--camp-accent-warning);
+      --warning: var(--camp-accent-amber);
+      --danger: var(--camp-accent-danger);
+      --text: var(--camp-text-on-dark);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; background: var(--camp-brand-deep); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    body.camp-theme { background: transparent; }
+    #app { position: fixed; inset: 0; overflow: hidden; }
+    video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    #panel {
+      position: absolute; top: 0; left: 0; height: 100%; width: var(--panel-w);
+      background: var(--panel-bg);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      transform: translateX(0); transition: transform 220ms ease;
+      padding: 16px 14px; display: flex; flex-direction: column; gap: 12px;
+    }
+    #panel.collapsed { transform: translateX(calc(-1 * var(--panel-w))); }
+    #toggle {
+      position: absolute; top: 12px; left: calc(var(--panel-w) + 12px);
+      background: rgba(15,32,47,0.85); color: var(--text); border: 1px solid rgba(255,255,255,0.1);
+      padding: 8px 10px; border-radius: 10px; cursor: pointer;
+    }
+    #panel.collapsed + #toggle { left: 12px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid rgba(255,255,255,0.12); }
+    .status { font-weight: 600; }
+    .status.ok { color: var(--accent); }
+    .status.warn { color: var(--warn); }
+    .status.warning { color: var(--warning); }
+    .status.danger { color: var(--danger); }
+    .bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
+    .bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--warn), var(--danger)); width: 0%; transition: width 180ms ease; }
+    .small { font-size: 12px; color: var(--camp-brand-fog); line-height: 1.35; }
+    .metric { font-size: 13px; }
+    .metric b { font-variant-numeric: tabular-nums; }
+    .calibration-wrap { display: flex; flex-direction: column; gap: 6px; }
+    .calibration-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .calibration-bar > div {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--camp-accent-brand), var(--camp-accent-success));
+      transition: width 140ms linear;
+    }
+    .calibration-guide {
+      padding: 8px 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+    }
+    .calibration-checks {
+      display: grid;
+      gap: 4px;
+    }
+    .calibration-check {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .calibration-check .label {
+      color: var(--camp-brand-fog);
+    }
+    .calibration-check .value {
+      font-weight: 600;
+    }
+    .calibration-check .value.pending {
+      color: rgba(221, 229, 237, 0.7);
+    }
+    .calibration-check .value.active {
+      color: var(--warn);
+    }
+    .calibration-check .value.ok {
+      color: var(--accent);
+    }
+    #hud {
+      position: absolute; right: 16px; bottom: 16px;
+      background: rgba(5,22,37,0.62); padding: 10px 12px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08); font-size: 12px;
+    }
+    #warningOverlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+    #warningOverlay.visible {
+      opacity: 1;
+    }
+    #warningFrame {
+      position: absolute;
+      inset: 14px;
+      border: 6px solid transparent;
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+    }
+    #warningOverlay.advisory #warningFrame {
+      border-color: var(--camp-accent-warning);
+      box-shadow: inset 0 0 22px color-mix(in srgb, var(--camp-accent-warning) 26%, transparent);
+    }
+    #warningOverlay.warning #warningFrame {
+      border-color: var(--camp-accent-amber);
+      box-shadow:
+        inset 0 0 30px color-mix(in srgb, var(--camp-accent-amber) 34%, transparent),
+        0 0 24px color-mix(in srgb, var(--camp-accent-amber) 20%, transparent);
+    }
+    #warningOverlay.high #warningFrame {
+      border-color: var(--camp-accent-danger);
+      box-shadow:
+        inset 0 0 38px color-mix(in srgb, var(--camp-accent-danger) 40%, transparent),
+        0 0 34px color-mix(in srgb, var(--camp-accent-danger) 30%, transparent);
+    }
+    #warningTint {
+      position: absolute;
+      inset: 0;
+      background: color-mix(in srgb, var(--camp-accent-danger) 8%, transparent);
+      opacity: 0;
+    }
+    #warningOverlay.warning #warningTint {
+      background: color-mix(in srgb, var(--camp-accent-amber) 10%, transparent);
+      opacity: 0.34;
+    }
+    #warningOverlay.high #warningTint {
+      background: color-mix(in srgb, var(--camp-accent-danger) 12%, transparent);
+      opacity: 0.5;
+      animation: warning-flash 900ms ease-in-out infinite;
+    }
+    #warningBadge {
+      position: absolute;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      min-width: 220px;
+      padding: 12px 20px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(5, 22, 37, 0.86);
+      color: var(--camp-text-on-dark);
+      text-align: center;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      box-shadow: 0 10px 24px rgba(5, 22, 37, 0.24);
+    }
+    #warningOverlay.advisory #warningBadge {
+      border-color: color-mix(in srgb, var(--camp-accent-warning) 72%, transparent);
+      color: var(--camp-accent-warning);
+    }
+    #warningOverlay.warning #warningBadge {
+      border-color: color-mix(in srgb, var(--camp-accent-amber) 78%, transparent);
+      color: var(--camp-accent-amber);
+    }
+    #warningOverlay.high #warningBadge {
+      border-color: color-mix(in srgb, var(--camp-accent-danger) 75%, transparent);
+      color: var(--camp-accent-danger);
+    }
+    #warningMeta {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.8);
+      font-weight: 600;
+    }
+    .hud-logo {
+      display: inline-flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .hud-logo img {
+      height: 56px;
+      width: auto;
+      display: block;
+    }
+    @keyframes warning-flash {
+      0%, 100% { opacity: 0.28; }
+      50% { opacity: 0.58; }
+    }
+  </style>
+</head>
+<body class="camp-theme">
+  <div id="app" class="camp-elevated">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+    <div id="warningOverlay" aria-live="polite" aria-atomic="true">
+      <div id="warningTint"></div>
+      <div id="warningFrame"></div>
+      <div id="warningBadge">
+        <span id="warningLabel">Safe</span>
+        <span id="warningMeta">Monitoring driver state</span>
+      </div>
+    </div>
+
+    <div id="panel">
+      <a class="hud-logo" href="../index.html" aria-label="Go to homepage">
+        <img src="../CA_Logo_Color-white.png" alt="CalAmp" />
+      </a>
+      <div class="row">
+        <div class="status ok" id="riskText">Monitoring</div>
+        <span class="badge" id="fps">-- fps</span>
+      </div>
+      <div class="bar"><div id="riskBar"></div></div>
+      <div class="metric">PERCLOS (last 60s): <b id="perclos">0.0%</b></div>
+      <div class="metric">Long blinks (0.5s-1.5s, last 60s): <b id="blinkRate">0</b> / min</div>
+      <div class="metric">Yawns (last 60s): <b id="yawnRate">0</b> / min</div>
+      <div class="metric">Head nods (last 60s): <b id="nodRate">0</b> / min</div>
+      <div class="metric">Microsleep events (last 60s): <b id="microsleepCount">0</b></div>
+      <div class="metric">Eye-closed duration: <b id="closedDur">0.0s</b></div>
+      <div class="metric">Eye aspect ratio: <b id="ear">0.00</b></div>
+      <div class="metric">Mouth aspect ratio: <b id="mar">0.00</b></div>
+      <div class="metric">Open-eye EAR ref: <b id="openEar">0.00</b></div>
+      <div class="metric">PERCLOS EAR cutoff: <b id="perclosCutoff">0.00</b></div>
+      <div class="metric">Eye openness: <b id="eyeOpenPct">0%</b></div>
+      <div class="metric">Head pitch ratio: <b id="headPitch">0.00</b></div>
+      <div class="calibration-wrap">
+        <div class="metric">Calibration: <b id="calib">--</b></div>
+        <div class="calibration-bar"><div id="calibBar"></div></div>
+        <div id="calibGuide" class="small calibration-guide">Center your face to start calibration.</div>
+        <div id="calibChecks" class="calibration-checks"></div>
+      </div>
+      <div class="small">
+        This is a simulation using MediaPipe FaceMesh. Drowsiness is estimated with a rolling 60s window:
+        PERCLOS = % of time with eyes closed beyond normal blink duration (EAR below a personalized threshold). Long blinks, microsleeps,
+        yawns, and head nods increase risk.
+      </div>
+      <div class="small">
+        Transparency: face mesh points, eye contours, and mouth points are drawn on the feed.
+      </div>
+    </div>
+    <button id="toggle">☰ Panel</button>
+    <div id="hud" class="small">Allow camera access to start.</div>
+  </div>
+
+  <script src="../shared/vendor/mediapipe/face_mesh/face_mesh.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+    const rootStyles = getComputedStyle(document.documentElement);
+    const brandSuccessGreen = rootStyles.getPropertyValue('--camp-accent-success').trim() || '#68b246';
+    const riskBar = document.getElementById('riskBar');
+    const riskText = document.getElementById('riskText');
+    const perclosEl = document.getElementById('perclos');
+    const blinkRateEl = document.getElementById('blinkRate');
+    const yawnRateEl = document.getElementById('yawnRate');
+    const nodRateEl = document.getElementById('nodRate');
+    const microsleepCountEl = document.getElementById('microsleepCount');
+    const closedDurEl = document.getElementById('closedDur');
+    const earEl = document.getElementById('ear');
+    const marEl = document.getElementById('mar');
+    const openEarEl = document.getElementById('openEar');
+    const perclosCutoffEl = document.getElementById('perclosCutoff');
+    const eyeOpenPctEl = document.getElementById('eyeOpenPct');
+    const headPitchEl = document.getElementById('headPitch');
+    const calibEl = document.getElementById('calib');
+    const calibBar = document.getElementById('calibBar');
+    const calibGuideEl = document.getElementById('calibGuide');
+    const calibChecksEl = document.getElementById('calibChecks');
+    const fpsEl = document.getElementById('fps');
+    const hud = document.getElementById('hud');
+    const toggle = document.getElementById('toggle');
+    const panel = document.getElementById('panel');
+    const warningOverlay = document.getElementById('warningOverlay');
+    const warningLabel = document.getElementById('warningLabel');
+    const warningMeta = document.getElementById('warningMeta');
+
+    toggle.onclick = () => panel.classList.toggle('collapsed');
+
+    const state = {
+      lastFrame: performance.now(),
+      fps: 0,
+      frames: [], // {t, dt, perclosCreditMs, blink, longBlink, microsleep, yawn, nod}
+      frameStats: {
+        blinks: 0,
+        yawns: 0,
+        nods: 0,
+        longBlinks: 0,
+        microsleeps: 0,
+      },
+      blinkOpen: true,
+      lastEyeClosedAt: 0,
+      eyeClosedStart: 0,
+      eyeClosedMs: 0,
+      lastYawnAt: 0,
+      yawning: false,
+      nodding: false,
+      lastNodAt: -Infinity,
+      perclosWindowMs: 60000,
+      minRateWindowMs: 15000,
+      perclosAdvisoryThreshold: 0.08,
+      perclosWarningThreshold: 0.12,
+      perclosDangerThreshold: 0.16,
+      perclosBlinkExclusionMs: 250,
+      earThreshold: 0.21,
+      openEyeReference: 0,
+      closedEyeReference: 0.08,
+      blinkEarThreshold: 0.18,
+      perclosEarThreshold: 0.06,
+      calibrationEarSamples: [],
+      openEyeSamples: [],
+      openEyeSampleWindowMs: 20000,
+      minOpenEyeReference: 0,
+      closedEyeSamples: [],
+      closedEyeSampleWindowMs: 20000,
+      maxClosedEyeReference: 0,
+      blinkOpenThreshold: 0.55,
+      blinkClosedThreshold: 0.35,
+      perclosClosedThreshold: 0.20,
+      perclosClosureStart: 0,
+      perclosClosureCreditedMs: 0,
+      marThreshold: 0.16,
+      baselineMar: 0.08,
+      marEma: 1,
+      marEmaAlpha: 0.38,
+      headRatioBaseline: 0,
+      headRatioEma: 0,
+      headRatioEmaAlpha: 0.22,
+      headNodEnterMultiplier: 1.10,
+      headNodExitMultiplier: 1.04,
+      headNodEnterDelta: 0.04,
+      headNodExitDelta: 0.015,
+      headNodCooldownMs: 900,
+      yawnState: 'idle',
+      yawnCandidateStart: 0,
+      yawnPeakRatio: 1,
+      yawnStartThreshold: 2.1,
+      yawnEndThreshold: 1.55,
+      yawnMinDurationMs: 850,
+      yawnCooldownMs: 1500,
+      lastYawnEnd: -Infinity,
+      calibration: {
+        start: performance.now(),
+        ready: false,
+        minFaceFrames: 20,
+        neutralRequiredFrames: 45,
+        neutralSamples: {
+          ear: [],
+          mar: [],
+          headRatio: [],
+        },
+        verification: {
+          eyeClosedEarSamples: [],
+        },
+        signals: {
+          faceFrames: 0,
+          eyeClosureSeen: false,
+          mouthOpenSeen: false,
+          headMotionSeen: false,
+        },
+        checks: {
+          face: false,
+          neutral: false,
+          eyeClosure: false,
+          mouthOpen: false,
+          headMotion: false,
+        },
+        provisional: {
+          openEyeReference: 0,
+          baselineMar: 0,
+          headRatioBaseline: 0,
+        },
+        instructions: 'Center your face to start calibration.',
+      },
+      scoreEma: 0,
+      scoreRiseHalfLifeMs: 2200,
+      scoreFallHalfLifeMs: 1200,
+      lastUiUpdateAt: 0,
+      uiUpdateIntervalMs: 120,
+    };
+
+    const EYE_LEFT = [33, 160, 158, 133, 153, 144];
+    const EYE_RIGHT = [362, 385, 387, 263, 373, 380];
+    const MOUTH_HORIZONTAL = [78, 308];
+    const MOUTH_VERTICAL_PAIRS = [
+      [13, 14],
+      [82, 87],
+      [312, 317],
+    ];
+    const MOUTH_INNER_MASK = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191];
+    const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+    const earFrom = (p, idx) => {
+      const [p1, p2, p3, p4, p5, p6] = idx.map(i => p[i]);
+      return (dist(p2,p6) + dist(p3,p5)) / (2 * dist(p1,p4));
+    };
+    const marFrom = p => {
+      const mouthWidth = Math.max(0.0001, dist(p[MOUTH_HORIZONTAL[0]], p[MOUTH_HORIZONTAL[1]]));
+      const verticalSum = MOUTH_VERTICAL_PAIRS.reduce((sum, [top, bottom]) => sum + dist(p[top], p[bottom]), 0);
+      return verticalSum / (2 * mouthWidth);
+    };
+    const headPitchFrom = p => {
+      const eyeMidY = (p[33].y + p[263].y) / 2;
+      const mouthMidY = (p[13].y + p[14].y) / 2;
+      return (p[1].y - eyeMidY) / Math.max(0.0001, mouthMidY - eyeMidY);
+    };
+    const average = values => values.length
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : 0;
+    const upperTailAverage = (values, tailFraction = 0.1) => {
+      if (!values.length) return 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      const tailSize = Math.max(5, Math.ceil(sorted.length * tailFraction));
+      return average(sorted.slice(-tailSize));
+    };
+    const lowerTailAverage = (values, tailFraction = 0.15) => {
+      if (!values.length) return 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      const tailSize = Math.max(5, Math.ceil(sorted.length * tailFraction));
+      return average(sorted.slice(0, tailSize));
+    };
+    const projectPoints = landmarks => {
+      const width = canvas.width;
+      const height = canvas.height;
+      return landmarks.map(point => ({ x: point.x * width, y: point.y * height }));
+    };
+    const traceScaledPolygon = (indices, points, scale = 1) => {
+      let centerX = 0;
+      let centerY = 0;
+      indices.forEach(index => {
+        centerX += points[index].x;
+        centerY += points[index].y;
+      });
+      centerX /= indices.length;
+      centerY /= indices.length;
+
+      indices.forEach((index, pointIndex) => {
+        const point = points[index];
+        const x = centerX + (point.x - centerX) * scale;
+        const y = centerY + (point.y - centerY) * scale;
+        if (pointIndex === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.closePath();
+    };
+    const drawSegments = (points, segments, color, lineWidth) => {
+      ctx.beginPath();
+      for (let i = 0; i < segments.length; i += 1) {
+        const segment = segments[i];
+        const start = Array.isArray(segment) ? segment[0] : segment.start;
+        const end = Array.isArray(segment) ? segment[1] : segment.end;
+        ctx.moveTo(points[start].x, points[start].y);
+        ctx.lineTo(points[end].x, points[end].y);
+      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    };
+    const pruneFrames = now => {
+      const cutoff = now - state.perclosWindowMs;
+      while (state.frames.length && state.frames[0].t < cutoff) {
+        const expired = state.frames.shift();
+        state.frameStats.blinks -= expired.blink ? 1 : 0;
+        state.frameStats.yawns -= expired.yawn ? 1 : 0;
+        state.frameStats.nods -= expired.nod ? 1 : 0;
+        state.frameStats.longBlinks -= expired.longBlink ? 1 : 0;
+        state.frameStats.microsleeps -= expired.microsleep ? 1 : 0;
+      }
+    };
+    const pruneOpenEyeSamples = now => {
+      const cutoff = now - state.openEyeSampleWindowMs;
+      while (state.openEyeSamples.length && state.openEyeSamples[0].t < cutoff) {
+        state.openEyeSamples.shift();
+      }
+    };
+    const pruneClosedEyeSamples = now => {
+      const cutoff = now - state.closedEyeSampleWindowMs;
+      while (state.closedEyeSamples.length && state.closedEyeSamples[0].t < cutoff) {
+        state.closedEyeSamples.shift();
+      }
+    };
+    const updateOpenEyeReference = (now, ear, headPitchRatio, yawnActive, normalizedEyeOpen) => {
+      if (!state.calibration.ready) return;
+      pruneOpenEyeSamples(now);
+
+      const stableHead = Math.abs(headPitchRatio - state.headRatioBaseline) <= 0.03;
+      if (normalizedEyeOpen >= 0.75 && !yawnActive && stableHead) {
+        state.openEyeSamples.push({ t: now, ear });
+      }
+
+      pruneOpenEyeSamples(now);
+      const candidate = upperTailAverage(state.openEyeSamples.map(sample => sample.ear), 0.15);
+      if (!candidate) return;
+
+      const floor = state.minOpenEyeReference || candidate;
+      const target = Math.max(floor, candidate);
+      state.openEyeReference += (target - state.openEyeReference) * 0.08;
+    };
+    const updateClosedEyeReference = (now, ear, yawnActive, normalizedEyeOpen) => {
+      if (!state.calibration.ready) return;
+      pruneClosedEyeSamples(now);
+
+      if (!yawnActive && normalizedEyeOpen <= 0.35) {
+        state.closedEyeSamples.push({ t: now, ear });
+      }
+
+      pruneClosedEyeSamples(now);
+      const candidate = lowerTailAverage(state.closedEyeSamples.map(sample => sample.ear), 0.2);
+      if (!candidate) return;
+
+      const ceiling = state.maxClosedEyeReference || candidate;
+      const target = Math.min(ceiling, candidate);
+      state.closedEyeReference += (target - state.closedEyeReference) * 0.12;
+      state.closedEyeReference = Math.min(state.closedEyeReference, state.openEyeReference - 0.02);
+    };
+    const normalizedEyeOpenFromEar = ear => {
+      const open = state.openEyeReference;
+      const closed = state.closedEyeReference;
+      const range = Math.max(0.01, open - closed);
+      return Math.max(0, Math.min(1, (ear - closed) / range));
+    };
+    const refreshEyeThresholds = () => {
+      const open = state.openEyeReference;
+      const closed = state.closedEyeReference;
+      const range = Math.max(0.01, open - closed);
+      state.perclosEarThreshold = closed + range * state.perclosClosedThreshold;
+      state.blinkEarThreshold = closed + range * state.blinkClosedThreshold;
+      state.earThreshold = state.blinkEarThreshold;
+    };
+    const pushCalibrationValue = (store, value, max = 180) => {
+      store.push(value);
+      if (store.length > max) {
+        store.shift();
+      }
+    };
+    const calibrationProgress = () => {
+      const checks = state.calibration.checks;
+      const total = Object.keys(checks).length;
+      const complete = Object.values(checks).filter(Boolean).length;
+      return { complete, total, percent: (complete / total) * 100 };
+    };
+    const calibrationCheckMarkup = (label, stateName, active = false) => {
+      const value = stateName ? 'Ready' : active ? 'Testing' : 'Waiting';
+      const className = stateName ? 'ok' : active ? 'active' : 'pending';
+      return `<div class="calibration-check"><span class="label">${label}</span><span class="value ${className}">${value}</span></div>`;
+    };
+    const updateCalibrationUi = () => {
+      const calibration = state.calibration;
+      const { complete, total, percent } = calibrationProgress();
+      calibBar.style.width = `${percent.toFixed(0)}%`;
+      calibEl.textContent = calibration.ready ? 'Locked In' : `Checking ${complete}/${total}`;
+      calibGuideEl.textContent = calibration.instructions;
+      calibChecksEl.innerHTML = [
+        calibrationCheckMarkup('Face tracking', calibration.checks.face, !calibration.checks.face),
+        calibrationCheckMarkup('Neutral baseline', calibration.checks.neutral, calibration.checks.face && !calibration.checks.neutral),
+        calibrationCheckMarkup('Eye closure signal', calibration.checks.eyeClosure, calibration.checks.neutral && !calibration.checks.eyeClosure),
+        calibrationCheckMarkup('Mouth signal', calibration.checks.mouthOpen, calibration.checks.neutral && !calibration.checks.mouthOpen),
+        calibrationCheckMarkup('Head movement signal', calibration.checks.headMotion, calibration.checks.neutral && !calibration.checks.headMotion),
+      ].join('');
+    };
+    const finalizeCalibration = () => {
+      const calibration = state.calibration;
+      const openEyeReference = calibration.provisional.openEyeReference || upperTailAverage(calibration.neutralSamples.ear) || 0.24;
+      const baselineMar = calibration.provisional.baselineMar || average(calibration.neutralSamples.mar) || 0.08;
+      const headRatioBaseline = calibration.provisional.headRatioBaseline || average(calibration.neutralSamples.headRatio) || 0.5;
+      const closedEyeCandidate = lowerTailAverage(calibration.verification.eyeClosedEarSamples, 0.5) || openEyeReference * 0.45;
+      const closedEyeReference = Math.max(0.02, Math.min(openEyeReference - 0.02, closedEyeCandidate));
+
+      state.headRatioBaseline = headRatioBaseline;
+      state.headRatioEma = headRatioBaseline;
+      state.baselineMar = baselineMar;
+      state.openEyeReference = openEyeReference;
+      state.minOpenEyeReference = openEyeReference * 0.85;
+      state.closedEyeReference = closedEyeReference;
+      state.maxClosedEyeReference = Math.min(openEyeReference * 0.6, closedEyeReference + 0.03);
+      state.marEma = 1;
+      refreshEyeThresholds();
+      state.marThreshold = Math.max(0.16, baselineMar * 2.1);
+      calibration.ready = true;
+      calibration.instructions = 'Calibration complete. All indicators are responding.';
+      updateCalibrationUi();
+    };
+    const updateCalibration = (now, ear, mar, headRatio) => {
+      const calibration = state.calibration;
+      calibration.signals.faceFrames += 1;
+      if (!calibration.checks.face && calibration.signals.faceFrames >= calibration.minFaceFrames) {
+        calibration.checks.face = true;
+      }
+
+      if (!calibration.checks.neutral) {
+        calibration.instructions = 'Hold a steady forward-facing pose with eyes open.';
+        const provisionalHeadBaseline = average(calibration.neutralSamples.headRatio) || headRatio;
+        const headStable = Math.abs(headRatio - provisionalHeadBaseline) <= 0.03;
+        if (headStable) {
+          pushCalibrationValue(calibration.neutralSamples.ear, ear);
+          pushCalibrationValue(calibration.neutralSamples.mar, mar);
+          pushCalibrationValue(calibration.neutralSamples.headRatio, headRatio);
+        }
+        if (calibration.neutralSamples.ear.length >= calibration.neutralRequiredFrames) {
+          calibration.checks.neutral = true;
+          calibration.provisional.openEyeReference = upperTailAverage(calibration.neutralSamples.ear, 0.15) || average(calibration.neutralSamples.ear);
+          calibration.provisional.baselineMar = average(calibration.neutralSamples.mar);
+          calibration.provisional.headRatioBaseline = average(calibration.neutralSamples.headRatio);
+        }
+        updateCalibrationUi();
+        return;
+      }
+
+      const openEyeReference = calibration.provisional.openEyeReference;
+      const baselineMar = calibration.provisional.baselineMar;
+      const headRatioBaseline = calibration.provisional.headRatioBaseline;
+
+      if (!calibration.checks.eyeClosure) {
+        calibration.instructions = 'Blink or close your eyes briefly to test the eye indicator.';
+      } else if (!calibration.checks.mouthOpen) {
+        calibration.instructions = 'Open your mouth wide to test the mouth indicator.';
+      } else if (!calibration.checks.headMotion) {
+        calibration.instructions = 'Nod your head slightly downward to test head motion.';
+      } else {
+        calibration.instructions = 'Finalizing calibration...';
+      }
+
+      const eyeClosureThreshold = openEyeReference * 0.78;
+      if (ear <= eyeClosureThreshold) {
+        calibration.signals.eyeClosureSeen = true;
+        pushCalibrationValue(calibration.verification.eyeClosedEarSamples, ear, 60);
+        calibration.checks.eyeClosure = true;
+      }
+
+      const mouthOpenThreshold = Math.max(baselineMar * 1.55, baselineMar + 0.06);
+      if (mar >= mouthOpenThreshold) {
+        calibration.signals.mouthOpenSeen = true;
+        calibration.checks.mouthOpen = true;
+      }
+
+      const headMotionThreshold = Math.max(headRatioBaseline * state.headNodEnterMultiplier, headRatioBaseline + 0.03);
+      if (headRatio >= headMotionThreshold) {
+        calibration.signals.headMotionSeen = true;
+        calibration.checks.headMotion = true;
+      }
+
+      if (Object.values(calibration.checks).every(Boolean)) {
+        finalizeCalibration();
+        return;
+      }
+
+      updateCalibrationUi();
+    };
+    updateCalibrationUi();
+    const metricsFromFrames = now => {
+      if (!state.frames.length) {
+        return { perclos: 0, blinks: 0, yawns: 0, nods: 0, longBlinks: 0, microsleeps: 0, windowMs: 0 };
+      }
+      const observedWindowMs = Math.min(
+        state.perclosWindowMs,
+        state.frames.reduce((sum, frame) => sum + frame.dt, 0)
+      );
+      const closedMs = state.frames.reduce(
+        (sum, frame) => sum + frame.perclosCreditMs,
+        0
+      );
+      return {
+        // PERCLOS is evaluated against a fixed 60s interval to avoid early-session spikes.
+        perclos: Math.min(1, closedMs / state.perclosWindowMs),
+        blinks: state.frameStats.blinks,
+        yawns: state.frameStats.yawns,
+        nods: state.frameStats.nods,
+        longBlinks: state.frameStats.longBlinks,
+        microsleeps: state.frameStats.microsleeps,
+        windowMs: observedWindowMs
+      };
+    };
+
+    const riskTier = (perclos, microsleepActive) => {
+      if (microsleepActive || perclos >= state.perclosDangerThreshold) {
+        return {
+          level: 'high',
+          statusClass: 'danger',
+          text: 'High Risk',
+          overlayLabel: 'High Risk',
+          overlayMeta: microsleepActive ? 'Microsleep Detected' : 'PERCLOS > 16% Threshold',
+        };
+      }
+      if (perclos >= state.perclosWarningThreshold) {
+        return {
+          level: 'warning',
+          statusClass: 'warning',
+          text: 'Warning',
+          overlayLabel: 'Warning',
+          overlayMeta: 'PERCLOS > 12% Threshold',
+        };
+      }
+      if (perclos >= state.perclosAdvisoryThreshold) {
+        return {
+          level: 'advisory',
+          statusClass: 'warn',
+          text: 'Advisory',
+          overlayLabel: 'Advisory',
+          overlayMeta: 'PERCLOS > 8% Threshold',
+        };
+      }
+      return {
+        level: 'safe',
+        statusClass: 'ok',
+        text: 'Low Risk',
+        overlayLabel: 'Low Risk',
+        overlayMeta: 'Monitoring driver state',
+      };
+    };
+
+    const updateWarningOverlay = tier => {
+      warningOverlay.className = '';
+      if (tier.level === 'safe') {
+        warningLabel.textContent = 'Low Risk';
+        warningMeta.textContent = 'Monitoring driver state';
+        return;
+      }
+      warningOverlay.classList.add('visible', tier.level);
+      warningLabel.textContent = tier.overlayLabel;
+      warningMeta.textContent = tier.overlayMeta;
+    };
+
+    const riskScore = (perclos, blinks, yawns, nods, longBlinkCount, microsleepActive) => {
+      const blinkRate = Number.isFinite(blinks) ? blinks : null;
+      const yawnRate = Number.isFinite(yawns) ? yawns : 0;
+      const nodRate = Number.isFinite(nods) ? nods : 0;
+      const scoreBase = microsleepActive || perclos >= state.perclosDangerThreshold
+        ? 0.9
+        : perclos >= state.perclosWarningThreshold
+          ? 0.62 + Math.min(0.14, (perclos - state.perclosWarningThreshold) * 1.5)
+          : perclos >= state.perclosAdvisoryThreshold
+            ? 0.34 + Math.min(0.14, (perclos - state.perclosAdvisoryThreshold) * 3.5)
+            : Math.min(0.22, perclos * 2.75);
+      const blinkPenalty = blinkRate === null ? 0 : blinkRate > 25 ? 0.12 : blinkRate < 6 ? 0.08 : 0;
+      const yawnPenalty = Math.min(0.25, yawnRate * 0.1);
+      const nodPenalty = Math.min(0.18, nodRate * 0.08);
+      const longBlinkPenalty = Math.min(0.2, longBlinkCount * 0.06);
+      const microPenalty = microsleepActive ? 0.35 : 0;
+      const score = Math.min(1, scoreBase + blinkPenalty + yawnPenalty + nodPenalty + longBlinkPenalty + microPenalty);
+      return { score };
+    };
+
+    const updateYawnDetector = (now, mar) => {
+      const baseline = Math.max(state.baselineMar || 0.6, 0.001);
+      const rawRatio = mar / baseline;
+      state.marEma += (rawRatio - state.marEma) * state.marEmaAlpha;
+      const ratio = state.marEma;
+      let yawn = false;
+
+      if (state.yawnState === 'cooldown' && now - state.lastYawnEnd >= state.yawnCooldownMs) {
+        state.yawnState = 'idle';
+      }
+
+      if (state.yawnState === 'idle') {
+        if (ratio >= state.yawnStartThreshold) {
+          state.yawnState = 'candidate';
+          state.yawnCandidateStart = now;
+          state.yawnPeakRatio = ratio;
+        }
+      } else if (state.yawnState === 'candidate') {
+        state.yawnPeakRatio = Math.max(state.yawnPeakRatio, ratio);
+        if (ratio < state.yawnEndThreshold) {
+          state.yawnState = 'idle';
+          state.yawnCandidateStart = 0;
+          state.yawnPeakRatio = 1;
+        } else if (now - state.yawnCandidateStart >= state.yawnMinDurationMs) {
+          state.yawnState = 'confirmed';
+          yawn = true;
+          state.lastYawnAt = now;
+        }
+      } else if (state.yawnState === 'confirmed') {
+        state.yawnPeakRatio = Math.max(state.yawnPeakRatio, ratio);
+        if (ratio < state.yawnEndThreshold) {
+          state.yawnState = 'cooldown';
+          state.lastYawnEnd = now;
+          state.yawnCandidateStart = 0;
+          state.yawnPeakRatio = 1;
+        }
+      }
+
+      return {
+        yawn,
+        yawnActive: state.yawnState === 'candidate' || state.yawnState === 'confirmed',
+        mouthOpen: ratio >= 1.18,
+        ratio,
+      };
+    };
+
+    const draw = (landmarks, ear, mar, mouthOpen) => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const points = projectPoints(landmarks);
+      const mouthLeft = points[78];
+      const mouthRight = points[308];
+      const mouthTop = points[13];
+      const mouthBottom = points[14];
+      const mouthX = mouthLeft.x;
+      const mouthY = mouthTop.y;
+      const mouthWidth = Math.max(1, mouthRight.x - mouthLeft.x);
+      const mouthHeight = Math.max(1, mouthBottom.y - mouthTop.y);
+      ctx.save();
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+      drawSegments(points, FACEMESH_TESSELATION, 'rgba(255,255,255,0.25)', 0.6);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      traceScaledPolygon(MOUTH_INNER_MASK, points, 1.08);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      drawSegments(points, FACEMESH_RIGHT_EYE, 'rgba(255,150,90,1)', 4);
+      drawSegments(points, FACEMESH_LEFT_EYE, 'rgba(0,175,215,1)', 4);
+      ctx.fillStyle = 'rgba(104,178,70,0.25)';
+      ctx.fillRect(mouthX, mouthY, mouthWidth, mouthHeight);
+      ctx.strokeStyle = brandSuccessGreen;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.strokeRect(mouthX, mouthY, mouthWidth, mouthHeight);
+      ctx.setLineDash([]);
+      ctx.restore();
+    };
+
+    const onResults = results => {
+      const now = performance.now();
+      const dt = now - state.lastFrame;
+      state.fps = dt > 0 ? 1000 / dt : 0;
+      state.lastFrame = now;
+
+      if (!results.multiFaceLandmarks?.length) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        state.nodding = false;
+        state.blinkOpen = true;
+        state.eyeClosedStart = 0;
+        state.eyeClosedMs = 0;
+        state.perclosClosureStart = 0;
+        state.perclosClosureCreditedMs = 0;
+        updateWarningOverlay({ level: 'safe' });
+        if (!state.calibration.ready) {
+          state.calibration.instructions = 'No face detected. Center your face in frame.';
+          updateCalibrationUi();
+        }
+        hud.textContent = 'No face detected.';
+        return;
+      }
+      const landmarks = results.multiFaceLandmarks[0];
+      const ear = (earFrom(landmarks, EYE_LEFT) + earFrom(landmarks, EYE_RIGHT)) / 2;
+      const mar = marFrom(landmarks);
+      const eyeMid = mid(landmarks[33], landmarks[263]);
+      const mouthMid = mid(landmarks[13], landmarks[14]);
+      const headRatio = headPitchFrom(landmarks);
+
+      // Calibration for personalized thresholds
+      if (!state.calibration.ready) {
+        updateCalibration(now, ear, mar, headRatio);
+      }
+
+      if (state.calibration.ready) {
+        const alpha = state.headRatioEma > 0 ? state.headRatioEmaAlpha : 1;
+        state.headRatioEma += (headRatio - state.headRatioEma) * alpha;
+      }
+      const currentEyeOpenNormalized = state.calibration.ready ? normalizedEyeOpenFromEar(ear) : 1;
+      const nodThreshold = Math.max(
+        state.headRatioBaseline * state.headNodEnterMultiplier,
+        state.headRatioBaseline + state.headNodEnterDelta
+      );
+      const nodResetThreshold = Math.max(
+        state.headRatioBaseline * state.headNodExitMultiplier,
+        state.headRatioBaseline + state.headNodExitDelta
+      );
+      const nod = state.calibration.ready
+        && state.headRatioBaseline > 0
+        && !state.nodding
+        && now - state.lastNodAt >= state.headNodCooldownMs
+        && state.headRatioEma >= nodThreshold;
+      const { yawn, yawnActive, mouthOpen, ratio: mouthRatio } = state.calibration.ready
+        ? updateYawnDetector(now, mar)
+        : { yawn: false, yawnActive: false, mouthOpen: false, ratio: 1 };
+      updateOpenEyeReference(now, ear, headRatio, yawnActive, currentEyeOpenNormalized);
+      updateClosedEyeReference(now, ear, yawnActive, currentEyeOpenNormalized);
+      refreshEyeThresholds();
+      const eyeOpen = state.calibration.ready ? normalizedEyeOpenFromEar(ear) : 1;
+      const eyesClosed = eyeOpen <= state.blinkClosedThreshold;
+      const perclosEyesClosed = eyeOpen <= state.perclosClosedThreshold;
+      draw(landmarks, ear, mar, mouthOpen);
+
+      // Blink detection: transition closed->open
+      let blink = false;
+      let longBlink = false;
+      let microsleep = false;
+      if (eyeOpen <= state.blinkClosedThreshold) {
+        state.blinkOpen = false;
+        if (!state.eyeClosedStart) state.eyeClosedStart = now;
+        state.eyeClosedMs = now - state.eyeClosedStart;
+      } else if (!state.blinkOpen) {
+        const dur = now - state.eyeClosedStart;
+        if (dur >= 80 && dur <= 500) blink = true;
+        if (dur > 500 && dur <= 1500) longBlink = true;
+        if (dur > 1500) microsleep = true;
+        state.blinkOpen = true;
+        state.eyeClosedStart = 0;
+        state.eyeClosedMs = 0;
+      }
+      if (eyeOpen >= state.blinkOpenThreshold) {
+        state.blinkOpen = true;
+      }
+      let perclosCreditMs = 0;
+      if (perclosEyesClosed) {
+        if (!state.perclosClosureStart) {
+          state.perclosClosureStart = now;
+        }
+        const perclosClosedMs = now - state.perclosClosureStart;
+        const eligibleMs = Math.max(0, perclosClosedMs - state.perclosBlinkExclusionMs);
+        perclosCreditMs = Math.max(0, eligibleMs - state.perclosClosureCreditedMs);
+        state.perclosClosureCreditedMs += perclosCreditMs;
+      } else {
+        state.perclosClosureStart = 0;
+        state.perclosClosureCreditedMs = 0;
+      }
+
+      state.yawning = yawnActive;
+
+      if (nod) {
+        state.lastNodAt = now;
+        state.nodding = true;
+      } else if (state.nodding && state.headRatioEma <= nodResetThreshold) {
+        state.nodding = false;
+      }
+
+      const microsleepActive = perclosEyesClosed && state.eyeClosedMs > 1500;
+
+      state.frames.push({ t: now, dt, eyesClosed, perclosCreditMs, blink, longBlink, microsleep, yawn, nod });
+      state.frameStats.blinks += blink ? 1 : 0;
+      state.frameStats.yawns += yawn ? 1 : 0;
+      state.frameStats.nods += nod ? 1 : 0;
+      state.frameStats.longBlinks += longBlink ? 1 : 0;
+      state.frameStats.microsleeps += microsleep ? 1 : 0;
+      pruneFrames(now);
+
+      const { perclos, blinks, yawns, nods, longBlinks, microsleeps, windowMs } = metricsFromFrames(now);
+      const windowMin = Math.max(1, windowMs / 60000);
+      const windowReady = windowMs >= state.minRateWindowMs;
+      const yawnRate = windowReady ? Math.round(yawns / windowMin) : null;
+      const nodRate = windowReady ? Math.round(nods / windowMin) : null;
+      const blinkRate = windowReady ? Math.round(blinks / windowMin) : null;
+      const { score: scoreInstant } = riskScore(perclos, blinkRate, yawnRate, nodRate, longBlinks, microsleepActive);
+      const scoreHalfLifeMs = scoreInstant >= state.scoreEma ? state.scoreRiseHalfLifeMs : state.scoreFallHalfLifeMs;
+      const alpha = 1 - Math.exp(-dt / scoreHalfLifeMs);
+      state.scoreEma = state.scoreEma + (scoreInstant - state.scoreEma) * alpha;
+
+      if (now - state.lastUiUpdateAt >= state.uiUpdateIntervalMs) {
+        state.lastUiUpdateAt = now;
+        fpsEl.textContent = `${state.fps.toFixed(0)} fps`;
+        perclosEl.textContent = (perclos * 100).toFixed(1) + '%';
+        const longBlinkRate = windowReady ? Math.round(longBlinks / windowMin) : null;
+        blinkRateEl.textContent = longBlinkRate === null ? '--' : longBlinkRate.toString();
+        yawnRateEl.textContent = yawnRate === null ? '--' : yawnRate.toString();
+        nodRateEl.textContent = nodRate === null ? '--' : nodRate.toString();
+        microsleepCountEl.textContent = microsleeps.toString();
+        closedDurEl.textContent = (state.eyeClosedMs / 1000).toFixed(1) + 's';
+        earEl.textContent = ear.toFixed(2);
+        marEl.textContent = mar.toFixed(2);
+        openEarEl.textContent = state.openEyeReference.toFixed(2);
+        perclosCutoffEl.textContent = state.perclosEarThreshold.toFixed(2);
+        const eyeOpenPct = eyeOpen * 100;
+        eyeOpenPctEl.textContent = `${Math.max(0, Math.min(100, eyeOpenPct)).toFixed(0)}%`;
+        headPitchEl.textContent = (state.headRatioEma || headRatio).toFixed(2);
+        riskBar.style.width = (state.scoreEma * 100).toFixed(0) + '%';
+
+        const tier = riskTier(perclos, microsleepActive);
+        riskText.className = 'status ' + tier.statusClass;
+        riskText.textContent = tier.text;
+        updateWarningOverlay(tier);
+        const blinkText = longBlinkRate === null ? '--' : longBlinkRate.toString();
+        const yawnText = yawnRate === null ? '--' : yawnRate.toString();
+        const nodText = nodRate === null ? '--' : nodRate.toString();
+        if (!state.calibration.ready) {
+          riskText.className = 'status warn';
+          riskText.textContent = 'Calibrating';
+          updateWarningOverlay({ level: 'safe' });
+          hud.textContent = `Calibration test: ${state.calibration.instructions}`;
+        } else {
+          hud.textContent = `Eyes ${perclosEyesClosed ? 'closed' : 'open'} | PERCLOS ${(perclos*100).toFixed(1)}% | Long blinks ${blinkText}/min | Microsleeps ${microsleeps} | Yawns ${yawnText}/min | Nods ${nodText}/min | Mouth x${mouthRatio.toFixed(2)}`;
+        }
+      }
+    };
+
+    const resizeCanvas = () => {
+      if (!video.videoWidth) return;
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
+    };
+
+    const init = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 960, max: 1280 }, height: { ideal: 540, max: 720 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      const mediapipeBase = '../shared/vendor/mediapipe/face_mesh';
+      const faceMesh = new FaceMesh({ locateFile: f => `${mediapipeBase}/${f}` });
+      faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: false,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+      });
+      faceMesh.onResults(onResults);
+
+      let isProcessingFrame = false;
+      const processLatestFrame = async () => {
+        if (isProcessingFrame) {
+          return;
+        }
+
+        isProcessingFrame = true;
+        try {
+          await faceMesh.send({ image: video });
+        } finally {
+          isProcessingFrame = false;
+        }
+      };
+
+      const scheduleFrame = () => {
+        if (typeof video.requestVideoFrameCallback === 'function') {
+          video.requestVideoFrameCallback(() => {
+            void processLatestFrame();
+            scheduleFrame();
+          });
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          void processLatestFrame();
+          scheduleFrame();
+        });
+      };
+
+      scheduleFrame();
+      hud.textContent = 'Tracking face and drowsiness metrics.';
+    };
+
+    init().catch(err => {
+      hud.textContent = 'Camera error: ' + err.message;
+    });
+  </script>
+</body>
+</html>
